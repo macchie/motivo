@@ -1,7 +1,7 @@
 {
   "name": "motivo",
   "version": "1.0.0",
-  "description": "Procedural music generator for video games \u2014 Neutralinojs desktop app",
+  "description": "Procedural music generator for video games — Neutralinojs desktop app",
   "private": true,
   "type": "module",
   "license": "MIT",
