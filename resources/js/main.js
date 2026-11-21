@@ -14,6 +14,7 @@ import { initNative, saveFile, folderWriter, openTextFile, store, isMac, setStor
 import { ArrangementView } from './ui/arrangement.js';
 import { Visualizer } from './ui/visualizer.js';
 import { History } from './ui/history.js';
+import { Wizard } from './ui/wizard.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -36,7 +37,7 @@ const state = { params: null, song: null, autoRegen: true, stale: false, library
 const gen = new GenClient();
 const player = new Player({ generate: (p, o) => gen.generate(p, o) });
 const history = new History();
-let arrangement, viz;
+let arrangement, viz, wizard;
 
 // ── Parameter schema ─────────────────────────────────────────────────────
 const LENGTHS = [8, 10, 12, 15, 20, 25, 30, 40, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300, 360, 420, 480, 600];
@@ -867,6 +868,49 @@ function labelIconButtons() {
   document.querySelectorAll('button[title]').forEach((b) => { if (!b.textContent.trim()) b.setAttribute('aria-label', b.title); });
 }
 
+// ── New-track wizard ────────────────────────────────────────────────────
+// Variations are auditioned through the main player; cancelling puts the
+// current track back exactly as it was.
+let wzPrev = null;
+function setupWizard() {
+  wizard = new Wizard({
+    generate: (p, o) => gen.generate(p, o),
+    master: () => state.params?.master ?? DEFAULT_PARAMS.master,
+    preview: (params, song) => {
+      if (!wzPrev) wzPrev = { playing: player.playing };
+      player.setParams(params);
+      player.setSong(song, { immediate: true });
+      player.seek(0);
+      if (!player.playing) player.play(0);
+    },
+    stopPreview: () => player.pause(),
+    restore: () => {
+      player.setParams(state.params);
+      if (state.song) player.setSong(state.song, { immediate: true });
+      if (!wzPrev?.playing) player.stop();
+      wzPrev = null;
+      updateHero();
+    },
+    apply: (params, song) => {
+      history.seal(); history.record(state.params, `New track “${params.name}”`, 'wizard'); history.seal();
+      state.params = params; state.libId = null; state.song = song;
+      player.setParams(params);
+      player.setSong(song, { immediate: true });
+      wzPrev = null;
+      clearStale(); syncAll(); updateHero();
+      pushRecent(); saveSession();
+      $('#seedInput').value = params.seed;
+      status(`Created “${params.name}” — fine-tune it in the Parameters panel`);
+      toast(`Created “${params.name}”`, { action: undoAction });
+    },
+  });
+}
+function openWizard() {
+  if ($('#exportModal').classList.contains('open')) return;
+  try { localStorage.setItem('motivo.wizardSeen', '1'); } catch (e) { /* noop */ }
+  wizard.open();
+}
+
 // ── Boot ─────────────────────────────────────────────────────────────────
 async function boot() {
   await initNative({ beforeClose: async () => { saveSession.flush(); await store.set('session', state.params); } });
@@ -889,9 +933,10 @@ async function boot() {
   $('#btnResetStyle').innerHTML = icon('reset', 14);
   $('#exClose').innerHTML = icon('x', 16);
   $('#btnPlay').innerHTML = icon('play', 18);
+  $('#btnNew').innerHTML = icon('plus', 14) + 'New';
   $('#btnExport').title = `Export (E · ${MOD}+E)`;
   $('#statusKeys').innerHTML = `<span><kbd>Space</kbd> play</span><span><kbd>G</kbd> new seed</span><span><kbd>R</kbd> randomize</span>
-    <span><kbd>E</kbd> export</span><span>${modKey('S')} save</span><span>${modKey('Z')} undo</span>`;
+    <span><kbd>N</kbd> new</span><span><kbd>E</kbd> export</span><span>${modKey('S')} save</span><span>${modKey('Z')} undo</span>`;
   clearStale();
   $('#arrLegend').innerHTML = [['A', '#f2b544'], ['B', '#4fd1c5'], ['C', '#a58bff']].map(([l, c]) => `<span><i style="background:${c}"></i>Section ${l}</span>`).join('');
 
@@ -908,11 +953,15 @@ async function boot() {
     const st = $('#statusText'); if (st.textContent.endsWith(' · applying at next bar')) st.textContent = st.textContent.replace(' · applying at next bar', '');
   });
   player.on('cycle', (n, song) => { arrangement.setSong(song, state.params); updateHero(); status(`Evolving · cycle ${n + 1}`); kick(); });
+  setupWizard();
   const saved = normalizeParams(await store.get('session', null));
   if (saved) { state.params = saved; syncAll(); await regenerate(); }
   else await applyPreset(PRESETS.find((x) => x.id === 'forest'), { recordHistory: false });
   renderLibrary();
   state.booted = true;
+  // First launch: start with the wizard (the default theme is loaded behind it).
+  let seen = true; try { seen = !!localStorage.getItem('motivo.wizardSeen'); } catch (e) { /* noop */ }
+  if (!saved && !seen) openWizard();
 
   // events
   player.on('state', setPlayState);
@@ -936,6 +985,7 @@ async function boot() {
   $('#trackName').onkeydown = (e) => { if (e.key === 'Enter') e.target.blur(); };
   $('#btnSave').onclick = (e) => saveToLibrary({ asNew: e.shiftKey });
   $('#btnExport').onclick = openExport;
+  $('#btnNew').onclick = openWizard;
   $('#exClose').onclick = closeExport; $('#exCancel').onclick = closeExport; $('#exGo').onclick = doExport;
   $('#exportModal').onclick = (e) => { if (e.target.id === 'exportModal' && !ex.busy) closeExport(); };
   $('#btnRandomize').onclick = randomizeMood;
@@ -965,6 +1015,7 @@ async function boot() {
   };
 
   document.addEventListener('keydown', (e) => {
+    if (wizard?.isOpen) { wizard.onKey(e); return; }
     const el = document.activeElement;
     const textEntry = /INPUT|SELECT|TEXTAREA/.test(el?.tagName) && el.type !== 'range' && el.type !== 'checkbox';
     const mod = e.ctrlKey || e.metaKey;
@@ -983,6 +1034,7 @@ async function boot() {
     else if (k === 'g') newVariation();
     else if (k === 'r') randomizeMood();
     else if (k === 'e') openExport();
+    else if (k === 'n') openWizard();
     else if (e.key === 'Home' || k === '0') player.seek(0);
   });
 

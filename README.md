@@ -71,6 +71,7 @@ Every track is the result of **seed + parameters**. That means:
 - 💾 **Project**: a few hundred bytes of JSON (seed and parameters) that regenerate the exact track.
 
 ### 🖥️ Interface
+- 🧭 **New track wizard** (`N`): five quick steps for beginners — what the music is for, a theme or genre, a mood pad (calm↔intense, dark↔bright) and tempo, a length — then pick your favourite of three variations. Everything stays editable in the Parameters panel. Opens automatically on first launch.
 - Live spectrum showing the current and next chord.
 - Arrangement timeline with sections, chord symbols and a mini piano roll per layer. Click or drag to seek (audio jumps when you release).
 - Changes made while playing land on the next bar, so tweaking sounds like an edit rather than a cut.
@@ -166,6 +167,7 @@ motivo/
             ├── generator.js    # the composer (+ GENERATOR_VERSION, planLength)
             ├── gen.worker.js   # runs the composer off the main thread (genclient.js wraps it)
             ├── params.js       # preset / saved-data normalisation shared with tests
+            ├── wizard.js       # new-track wizard: answers → parameters (UI in ui/wizard.js)
             ├── ticker.js       # worker-based scheduler clock
             ├── instruments.js  # instruments, kits, beds, details
             ├── synth.js        # Web Audio synthesis + FX graph

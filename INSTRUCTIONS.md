@@ -7,31 +7,52 @@ This guide explains every part of Motivo: what each control does, how the compos
 ## 📑 Contents
 
 1. [⚡ Your first track in 60 seconds](#-your-first-track-in-60-seconds)
-2. [🧠 Core concepts](#-core-concepts)
-3. [🖥️ Interface tour](#%EF%B8%8F-interface-tour)
-4. [🎨 Themes (presets)](#-themes-presets)
-5. [🎭 Genres](#-genres)
-6. [🎛️ Parameters reference](#%EF%B8%8F-parameters-reference)
-7. [🔁 Playback modes in depth](#-playback-modes-in-depth)
-8. [🎚️ Mixer and instruments](#%EF%B8%8F-mixer-and-instruments)
-9. [🌧️ Ambience](#%EF%B8%8F-ambience)
-10. [📊 Visualizer and arrangement](#-visualizer-and-arrangement)
-11. [📚 Library, seeds and projects](#-library-seeds-and-projects)
-12. [📦 Exporting](#-exporting)
-13. [🎮 Using the music in your game](#-using-the-music-in-your-game)
-14. [⌨️ Keyboard shortcuts](#%EF%B8%8F-keyboard-shortcuts)
-15. [💡 Recipes and tips](#-recipes-and-tips)
-16. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
-
+2. [🧭 New track wizard](#-new-track-wizard)
+3. [🧠 Core concepts](#-core-concepts)
+4. [🖥️ Interface tour](#%EF%B8%8F-interface-tour)
+5. [🎨 Themes (presets)](#-themes-presets)
+6. [🎭 Genres](#-genres)
+7. [🎛️ Parameters reference](#%EF%B8%8F-parameters-reference)
+8. [🔁 Playback modes in depth](#-playback-modes-in-depth)
+9. [🎚️ Mixer and instruments](#%EF%B8%8F-mixer-and-instruments)
+10. [🌧️ Ambience](#%EF%B8%8F-ambience)
+11. [📊 Visualizer and arrangement](#-visualizer-and-arrangement)
+12. [📚 Library, seeds and projects](#-library-seeds-and-projects)
+13. [📦 Exporting](#-exporting)
+14. [🎮 Using the music in your game](#-using-the-music-in-your-game)
+15. [⌨️ Keyboard shortcuts](#%EF%B8%8F-keyboard-shortcuts)
+16. [💡 Recipes and tips](#-recipes-and-tips)
+17. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
 ---
 
 ## ⚡ Your first track in 60 seconds
+
+> 🧭 **New here?** Press **＋ New** in the top bar (or <kbd>N</kbd>) for the **New track wizard**. It asks five simple questions and gives you three variations to choose from. The wizard opens by itself the first time you launch Motivo. The steps below are the manual route.
+
 
 1. **Pick a theme** in the left sidebar, for example 🌲 *Enchanted Forest*. A track is generated immediately.
 2. Press <kbd>Space</kbd> to play.
 3. Don't like it? Press <kbd>G</kbd> for a new variation. Same style, new seed.
 4. Adjust **Mood** in the right panel (more *Energy*, less *Tension*…). The track regenerates as you go and the new version takes over on the next bar. Changed your mind? <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> undoes it.
 5. Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> to keep it in your library, then <kbd>E</kbd> → **WAV audio** → **Export**. Done: a seamless loop ready for your engine. 🎉
+
+---
+
+## 🧭 New track wizard
+
+Open it with **＋ New** or <kbd>N</kbd>. Each step sets a handful of parameters for you; nothing is locked, so you can fine-tune the result in the Parameters panel afterwards.
+
+| Step | You choose | What it sets |
+|---|---|---|
+| 1. Purpose | Exploration · Combat & action · Menu & UI · Stinger & cutscene · Ambience & tension | Playback mode, variation, motif repetition, intro/outro, and which themes are suggested |
+| 2. Setting | A suggested theme (or any of the 21), or just a genre | The theme's (or genre's) instruments, harmony, ambience and effects |
+| 3. Feel | A point on the mood pad, plus Slower / As designed / Faster | Energy (left↔right) and Brightness (down↔up); Tension and Density follow along. Tempo moves ±15 % within the genre's range. Leave the dot alone to keep the theme's own mood |
+| 4. Length | Short · Medium · Long · Endless (loops), or Sting · Short · Medium · Cutscene (stingers) | Length and, for *Endless*, Evolving mode. Each option shows the real duration and bars |
+| 5. Pick one | One of three variations (different seeds) | Seed. Press ▶ to audition, **Three more** for new ones, **Use this track** to keep it |
+
+- Auditioning uses the main player. Closing the wizard (✕, <kbd>Esc</kbd> or *Open the editor instead*) puts your previous track back as it was.
+- Creating a track can be undone with <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd>.
+- In the wizard: <kbd>Enter</kbd> goes to the next step, double-click picks and continues, arrow keys move the mood dot (<kbd>Shift</kbd> for bigger steps), <kbd>Space</kbd> plays/stops the selected variation.
 
 ---
 
@@ -414,6 +435,7 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 | <kbd>Space</kbd> | Play / pause |
 | <kbd>G</kbd> | Generate (new seed), or apply pending changes |
 | <kbd>R</kbd> | Randomize mood + new seed |
+| <kbd>N</kbd> | New track wizard |
 | <kbd>E</kbd> / <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>E</kbd> | Open export |
 | <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> | Save to library (updates the loaded entry) |
 | <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | Save a copy to the library |
