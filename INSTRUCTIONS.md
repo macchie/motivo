@@ -30,8 +30,8 @@ This guide explains every part of Motivo: what each control does, how the compos
 1. **Pick a theme** in the left sidebar, for example 🌲 *Enchanted Forest*. A track is generated immediately.
 2. Press <kbd>Space</kbd> to play.
 3. Don't like it? Press <kbd>G</kbd> for a new variation. Same style, new seed.
-4. Adjust **Mood** in the right panel (more *Energy*, less *Tension*…). The track regenerates as you go and keeps playing from the same position.
-5. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to keep it in your library, then <kbd>E</kbd> → **WAV audio** → **Export**. Done: a seamless loop ready for your engine. 🎉
+4. Adjust **Mood** in the right panel (more *Energy*, less *Tension*…). The track regenerates as you go and the new version takes over on the next bar. Changed your mind? <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> undoes it.
+5. Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> to keep it in your library, then <kbd>E</kbd> → **WAV audio** → **Export**. Done: a seamless loop ready for your engine. 🎉
 
 ---
 
@@ -93,9 +93,10 @@ Every track has seven layers, each with its own color across the whole UI:
 | ■ **Stop** | Stops and rewinds. |
 | 🔁 **Repeat** | Repeats **one-shot** tracks while previewing. Loop modes always repeat, so the button is locked on for them. |
 | **Time display** | Position / length, `Bar x.y`, and the current cycle in Evolving mode. |
+| ↶ ↷ **Undo / Redo** | Step back and forward through every change: parameters, mixer, new seeds, randomize, themes, loads and imports. |
 | **Seed** | Type any text and press <kbd>Enter</kbd> to generate from it. The 🎲 picks a random seed. |
 | ✨ **Generate / Apply** | See [Generate vs. Apply](#-generate-vs-apply). |
-| 🔖 **Save** | Saves the current track to the library (<kbd>Ctrl</kbd>+<kbd>S</kbd>). |
+| 🔖 **Save** | Saves the current track to the library (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd>). If the track came from the library, this updates that entry; <kbd>Shift</kbd>-click or <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> saves a copy. |
 | ⬇️ **Export** | Opens the export dialog (<kbd>E</kbd>). |
 
 ### Status bar
@@ -196,7 +197,7 @@ All parameters live in the right panel, in collapsible groups. The small text on
 | Control | Values | Effect |
 |---|---|---|
 | **Playback mode** | Loop · Evolving · One-shot | See [Playback modes](#-playback-modes-in-depth). |
-| **Length / Cycle length** | 8 s → 10 min | Target duration, rounded to whole bars (loops round to 4-bar phrases). The readout shows the resulting number of bars. |
+| **Length / Cycle length** | 8 s → 10 min | Target duration, rounded to whole bars (loops round to 4-bar phrases). The readout shows the **actual** resulting duration and bars; a note appears when it differs from the target. |
 | **Form** | Auto · A · AB · ABA · AABA · ABAC · ABACABA | Section plan. *Auto* picks a form from the length (about 8 bars per section). |
 | **Intro / Outro** | None · 1 · 2 · 4 bars | *One-shot only.* The intro uses pad and ambience, then a drum pickup. The outro resolves on the tonic with a final hit. |
 | **Variation** | Repetitive → Ever-changing | How much repeated sections and evolving cycles differ from the original material. |
@@ -335,7 +336,7 @@ A log-frequency spectrum (35 Hz–16 kHz) with peak caps and a waveform trace, t
 - **Section row**: Intro/Outro (gray), **A** (amber), **B** (teal), **C** (violet).
 - **Chord row**: chord symbols, spelled with ♯ or ♭ to suit the key.
 - **Lanes**: a mini piano roll per layer. Drums are drawn on three rows (kick / snare / cymbals). Ambience shows the bed as a band and details as dots.
-- **Playhead** in teal. **Click or drag** anywhere in the lanes to seek.
+- **Playhead** in teal. **Click or drag** anywhere in the lanes to seek. While dragging only the playhead moves; playback jumps when you let go.
 - A dashed line with ↻ (loop) or ∞ (evolving) marks the loop point.
 
 ---
@@ -343,15 +344,17 @@ A log-frequency spectrum (35 Hz–16 kHz) with peak caps and a waveform trace, t
 ## 📚 Library, seeds and projects
 
 ### Library tab
-- **Saved tracks**: added with 🔖 / <kbd>Ctrl</kbd>+<kbd>S</kbd>. Click to load, 🗑️ to delete.
+- **Saved tracks**: added with 🔖 / <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd>. Click to load (the loaded entry is highlighted and *Save* updates it), 🗑️ to delete. Deleting shows an **Undo** button for a few seconds.
 - **Recent generations**: the last 15 tracks created with *Generate*, a theme click, *Randomize* or a manual seed. Your safety net when you skip past a good one.
-- **Import**: load a `.motivo.json` project, or a library backup (adds all its entries).
+- **Import**: load a `.motivo.json` project, or a library backup. Entries already in your library and invalid entries are skipped, and the result is reported.
 - **Backup**: save the whole library as one JSON file.
 
-The library, recent list and current session are stored with Neutralino's storage. In browser mode they use `localStorage`. Your last session is restored on launch.
+The library, recent list and current session are stored with Neutralino's storage, in your user data folder (for example `~/Library/Application Support/io.motivo.app` on macOS). Older versions kept it next to the app; that data is moved over on first launch. In browser mode they use `localStorage`. Your last session is saved when you close the app and restored on launch. If saving ever fails, Motivo tells you; use **Backup** to keep a copy.
+
+Tracks remember which version of the composer made them. If a later Motivo version changes how music is generated, loading an older track shows a warning that it may sound different.
 
 ### 🎲 Randomize (✨ wand button, <kbd>R</kbd>)
-Randomizes the mood sliders around the genre defaults (±30), plus variation, motif repetition, tempo (within the genre range), key, scale and chord-change rate. It also picks a new seed. Orchestration and effects stay as they are.
+Randomizes the mood sliders around the genre defaults (±30), plus variation, motif repetition, tempo (within the genre range), key, scale and chord-change rate. It also picks a new seed. Orchestration and effects stay as they are. Like <kbd>G</kbd>, it can be undone from the toast or with Undo.
 
 ### 💾 Project files
 A project (`*.motivo.json`) contains the seed and every parameter. It's tiny, easy to diff and version-control friendly. Commit it next to your game assets so you can regenerate or tweak a track later.
@@ -365,18 +368,19 @@ Open with **Export** or <kbd>E</kbd>. Choose a format, adjust the options and pr
 | Format | Output | Options |
 |---|---|---|
 | 🔊 **WAV audio** | Full stereo mix | Sample rate (44.1 / 48 kHz) · bit depth (16 / 24-bit) · normalize to −1 dBFS · embed loop points (loop modes) |
-| 🎚️ **Stems** | One WAV per audible layer, in a folder you pick | Same audio options. **Not normalized individually**, so stems stay balanced when layered |
-| 🎹 **MIDI** | Type-1 `.mid` | One track per unmuted layer, tempo, meter, section markers, GM programs, drums on channel 10 |
+| 🎚️ **Stems** | One WAV per audible layer, plus an optional matching `_mix.wav`, in a folder you pick | Same audio options. Stems skip the master compressor and tape saturation and are **not normalized**, so they add up exactly to the matching mix when layered |
+| 🎹 **MIDI** | Type-1 `.mid` | One track per audible layer (mute and solo apply), tempo, meter, section markers, GM programs, drums on channel 10 |
 | 💾 **Project** | `.motivo.json` | Seed + parameters |
 
-**File names** are suggested automatically, for example `boss_battle_164bpm_Cs_harmonic_minor_loop.wav`. You can edit the name; stems add a `_pad`, `_bass`… suffix.
+**File names** are suggested automatically, for example `boss_battle_164bpm_Cs_harmonic_minor_loop.wav`. You can edit the name; only characters that file systems reject are replaced, and the dialog shows the final name. Stems add a `_pad`, `_bass`… suffix.
 
 **Rendering details**
 - Rendering runs offline, faster than real time, in chunks with a progress bar.
 - Loops are pre-rolled for seamless wrap-around (see [Seamless loop](#-seamless-loop-default)).
 - Loop points are stored in a standard `smpl` chunk (start = 0, end = last sample), which many samplers and audio middleware read.
 - WAV files also contain `INAM` (title) and `ISFT` metadata.
-- In Evolving mode, the dialog shows a *cycles* slider with the resulting duration.
+- In Evolving mode, the dialog shows a *cycles* slider with the resulting duration, and lets you start from **cycle 1** or from the **cycle you're hearing**.
+- The dialog shows the expected output size and warns when a render needs a lot of memory. **Cancel** stops a render in progress.
 
 ---
 
@@ -410,11 +414,15 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 | <kbd>Space</kbd> | Play / pause |
 | <kbd>G</kbd> | Generate (new seed), or apply pending changes |
 | <kbd>R</kbd> | Randomize mood + new seed |
-| <kbd>E</kbd> / <kbd>Ctrl</kbd>+<kbd>E</kbd> | Open export |
-| <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save to library |
+| <kbd>E</kbd> / <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>E</kbd> | Open export |
+| <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> | Save to library (updates the loaded entry) |
+| <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | Save a copy to the library |
+| <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> | Undo |
+| <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> | Redo |
 | <kbd>Home</kbd> / <kbd>0</kbd> | Back to start |
 | <kbd>Enter</kbd> | In the seed field: generate from that seed · in the export dialog: export |
-| <kbd>Esc</kbd> | Close dialog / leave text field |
+| <kbd>Esc</kbd> | Close dialog (cancels a running export) / leave text field |
+| <kbd>Tab</kbd>, <kbd>Enter</kbd> | Move between controls; Enter on a theme or library entry loads it (<kbd>Shift</kbd>+<kbd>Enter</kbd> on a theme also plays) |
 | *Double-click* | Slider: reset to default · theme: generate and play |
 
 ---
@@ -427,7 +435,7 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 - 🌑 **Instant horror**: Dark Ambient, Whole Tone or Phrygian, Tension 90, Lo-fi 25, a Distant Thunder detail.
 - 🕹️ **Authentic chip sound**: Chiptune genre, Reverb mix ≤ 10, Width ≤ 30, Humanize 0.
 - 🌆 **Synthwave pump**: Sidechain pump 50–70 with drums unmuted.
-- 🎲 **Found a great one?** Press <kbd>Ctrl</kbd>+<kbd>S</kbd> straight away. If you forget, it's still in *Recent generations*.
+- 🎲 **Found a great one?** Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> straight away. If you forget, it's still in *Recent generations*.
 - 🧪 **Explore meters**: the same theme in 5/4 or 7/8 gives instantly unusual, "puzzle" or "alien" moods.
 
 ---

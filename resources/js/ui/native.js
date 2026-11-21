@@ -2,19 +2,63 @@
 // UI also runs in a plain browser during development.
 
 export const isNative = () => typeof window.Neutralino !== 'undefined' && typeof window.NL_OS !== 'undefined';
+export const isMac = () => (isNative() ? window.NL_OS === 'Darwin' : /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
 const sep = () => (window.NL_OS === 'Windows' ? '\\' : '/');
 
-export async function initNative() {
-  if (!isNative()) return;
+// Called with (key, error) whenever a write to persistent storage fails.
+let onStoreError = (key, e) => console.warn('store.set failed', key, e);
+export function setStoreErrorHandler(fn) { onStoreError = fn; }
+
+export async function initNative({ beforeClose } = {}) {
+  if (!isNative()) {
+    if (beforeClose) window.addEventListener('beforeunload', () => { beforeClose(); });
+    return;
+  }
   try {
     Neutralino.init();
-    Neutralino.events.on('windowClose', () => Neutralino.app.exit());
+    Neutralino.events.on('windowClose', async () => {
+      // Flush pending saves before quitting (never block exit for more than 1.5 s).
+      try { if (beforeClose) await Promise.race([beforeClose(), new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* noop */ }
+      Neutralino.app.exit();
+    });
+    await migrateStorage();
   } catch (e) { console.warn('Neutralino init failed', e); }
+}
+
+// Storage moved from the app folder (not writable once installed) to the
+// per-user data folder ("dataLocation": "system"). Copy old data across once.
+async function migrateStorage() {
+  if (!window.NL_PATH) return;
+  for (const key of ['library', 'recent', 'session']) {
+    try {
+      await Neutralino.storage.getData(key);
+      continue; // already present in the new location
+    } catch (e) { /* missing: try the old location */ }
+    try {
+      const old = await Neutralino.filesystem.readFile(`${window.NL_PATH}${sep()}.storage${sep()}${key}.neustorage`);
+      if (old) await Neutralino.storage.setData(key, old);
+    } catch (e) { /* nothing to migrate */ }
+  }
 }
 
 async function defaultDir() {
   try { return await Neutralino.os.getPath('music'); } catch (e) { /* noop */ }
   try { return await Neutralino.os.getPath('documents'); } catch (e) { return ''; }
+}
+
+// Large binaries are written in chunks: the native bridge base64-encodes each
+// call, so one huge write would need several copies of the file in memory.
+const CHUNK = 8 * 1024 * 1024;
+async function writeBinary(path, data) {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  if (bytes.byteLength <= CHUNK || typeof Neutralino.filesystem.appendBinaryFile !== 'function') {
+    await Neutralino.filesystem.writeBinaryFile(path, bytes.buffer.byteLength === bytes.byteLength ? bytes.buffer : bytes.slice().buffer);
+    return;
+  }
+  await Neutralino.filesystem.writeBinaryFile(path, bytes.slice(0, CHUNK).buffer);
+  for (let o = CHUNK; o < bytes.byteLength; o += CHUNK) {
+    await Neutralino.filesystem.appendBinaryFile(path, bytes.slice(o, o + CHUNK).buffer);
+  }
 }
 
 export async function saveFile(name, data, filters = []) {
@@ -23,7 +67,7 @@ export async function saveFile(name, data, filters = []) {
     const path = await Neutralino.os.showSaveDialog('Save file', { defaultPath: dir ? dir + sep() + name : name, filters });
     if (!path) return null;
     if (typeof data === 'string') await Neutralino.filesystem.writeFile(path, data);
-    else await Neutralino.filesystem.writeBinaryFile(path, data);
+    else await writeBinary(path, data);
     return path;
   }
   const blob = new Blob([data], { type: typeof data === 'string' ? 'application/json' : 'application/octet-stream' });
@@ -39,7 +83,7 @@ export async function folderWriter() {
   if (isNative()) {
     const dir = await Neutralino.os.showFolderDialog('Choose a folder for the stems', { defaultPath: await defaultDir() });
     if (!dir) return null;
-    return { label: dir, write: (name, data) => Neutralino.filesystem.writeBinaryFile(dir + sep() + name, data) };
+    return { label: dir, write: (name, data) => writeBinary(dir + sep() + name, data) };
   }
   return { label: 'Downloads', write: (name, data) => saveFile(name, data) };
 }
@@ -66,10 +110,16 @@ export const store = {
       return v ? JSON.parse(v) : fallback;
     } catch (e) { return fallback; }
   },
+  // Resolves true on success. Failures are reported to the error handler so
+  // the UI can tell the user instead of losing data silently.
   async set(key, value) {
     try {
       if (isNative()) await Neutralino.storage.setData(key, JSON.stringify(value));
       else localStorage.setItem('motivo.' + key, JSON.stringify(value));
-    } catch (e) { console.warn('store.set failed', e); }
+      return true;
+    } catch (e) {
+      onStoreError(key, e);
+      return false;
+    }
   },
 };

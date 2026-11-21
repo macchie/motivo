@@ -69,14 +69,15 @@ export function encodeMIDI(song, params, songs = [song]) {
     off += s.totalBeats;
   }
   tracks.push(trackChunk(meta, `${params.name} – ${song.keyName} ${song.scaleName}`));
-  let ch = 0;
+  // Same audibility rule as playback and stem export: mute, and solo if any layer is soloed.
+  const anySolo = LAYER_IDS.some((id) => params.layers[id]?.solo);
+  let ch = 0; // melodic layers use channels 0–4; drums always use channel 10 (index 9)
   for (const id of LAYER_IDS) {
     if (id === 'ambience') continue;
     const lp = params.layers[id];
-    if (!lp || lp.mute) continue;
+    if (!lp || lp.mute || (anySolo && !lp.solo)) continue;
     const isDrum = id === 'drums';
     const channel = isDrum ? 9 : ch++;
-    if (channel === 9 && !isDrum) ch++;
     const ev = [];
     if (!isDrum) ev.push([0, [0xc0 | channel, (INSTRUMENTS[lp.inst]?.gm ?? 0) & 127], 0]);
     let o = 0;

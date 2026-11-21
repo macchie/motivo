@@ -1,7 +1,7 @@
 {
   "name": "motivo",
   "version": "1.0.0",
-  "description": "Procedural music generator for video games — Neutralinojs desktop app",
+  "description": "Procedural music generator for video games \u2014 Neutralinojs desktop app",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,8 @@
     "test": "node --test tests/*.test.mjs",
     "build": "neu build --release --clean",
     "build:embed": "neu build --release --clean --embed-resources",
-    "clean": "rm -rf dist .tmp neutralinojs.log"
+    "clean": "rm -rf dist .tmp neutralinojs.log",
+    "golden": "node scripts/update-golden.mjs"
   },
   "devDependencies": {
     "@neutralinojs/neu": "^11.8.0",

@@ -27,8 +27,12 @@ function makeWave(ctx, fn, H = 48) {
 const hashPan = (t, salt = 0) => { const s = Math.sin(t * 12.9898 + salt * 78.233) * 43758.5453; return (s - Math.floor(s)) * 2 - 1; };
 
 export class Synth {
-  constructor(ctx, { offline = false, loopSec = null, soloLayer = null } = {}) {
+  constructor(ctx, { offline = false, loopSec = null, soloLayer = null, linearMaster = false } = {}) {
     this.ctx = ctx; NYQ = ctx.sampleRate / 2 - 100; this.offline = offline; this.loopSec = loopSec; this.soloLayer = soloLayer;
+    // Stems bypass the non-linear master stages (saturation + compressor) so that
+    // stems summed in an engine add up to the same mix.
+    this.linearMaster = linearMaster;
+    this._irCache = new Map(); this._irTimer = null;
     this.p = null; this.bpm = 100; this.keyPc = 0; this.bright = 1; this.pump = 0;
     const tri4 = (t) => Math.round(((1 - 4 * Math.abs(t - 0.5)) + 1) * 7.5) / 7.5 - 1;
     this.waves = {
@@ -75,7 +79,8 @@ export class Synth {
     this.comp = c.createDynamicsCompressor();
     this.comp.threshold.value = -16; this.comp.knee.value = 12; this.comp.ratio.value = 3; this.comp.attack.value = 0.008; this.comp.release.value = 0.22;
     this.out = c.createGain();
-    this.mix.connect(this.wow).connect(this.shaper).connect(this.lofiLP).connect(this.warm).connect(this.comp).connect(this.out);
+    if (this.linearMaster) this.mix.connect(this.wow).connect(this.lofiLP).connect(this.warm).connect(this.out);
+    else this.mix.connect(this.wow).connect(this.shaper).connect(this.lofiLP).connect(this.warm).connect(this.comp).connect(this.out);
     if (!this.offline) {
       this.analyser = c.createAnalyser(); this.analyser.fftSize = 2048; this.analyser.smoothingTimeConstant = 0.78;
       this.out.connect(this.analyser);
@@ -86,7 +91,8 @@ export class Synth {
     this.revIn = c.createGain();
     this.conv = c.createConvolver();
     this.revRet = c.createGain();
-    this.revIn.connect(this.conv).connect(this.revRet).connect(this.mix);
+    this.revSwap = c.createGain(); // briefly dipped while the impulse response is swapped
+    this.revIn.connect(this.conv).connect(this.revSwap).connect(this.revRet).connect(this.mix);
     // ping-pong delay
     this.dIn = c.createGain();
     this.dL = c.createDelay(4); this.dR = c.createDelay(4);
@@ -165,7 +171,8 @@ export class Synth {
     if (!prev || prev.lofi !== p.lofi || !this.shaper.curve) this.shaper.curve = this._satCurve(lofi);
     this._set(this.out.gain, Math.pow(p.master / 100, 1.5) * 1.1);
     this._set(this.bedGain.gain, Math.pow(p.bedLevel / 100, 1.4) * 1.2);
-    if (!prev || prev.reverbSize !== p.reverbSize || !this.conv.buffer) this.conv.buffer = this._ir(p.reverbSize);
+    if (!this.conv.buffer) { this.conv.buffer = this._ir(p.reverbSize); this._irSize = this._irWanted = p.reverbSize; }
+    else if (this._irWanted !== p.reverbSize) this._swapIR(p.reverbSize);
   }
 
   _satCurve(amt) {
@@ -174,7 +181,32 @@ export class Synth {
     return curve;
   }
 
+  // Rebuilding a long impulse response is expensive and swapping it abruptly
+  // clicks: live, wait for the slider to settle, then dip the wet signal.
+  _swapIR(size) {
+    this._irWanted = size;
+    if (this.offline) { this.conv.buffer = this._ir(size); this._irSize = size; return; }
+    clearTimeout(this._irTimer);
+    this._irTimer = setTimeout(() => {
+      if (this._irSize === size) return;
+      const buf = this._ir(size), g = this.revSwap.gain, now = this.ctx.currentTime;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(0, now + 0.06);
+      setTimeout(() => {
+        this.conv.buffer = buf; this._irSize = size;
+        const t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(0, t); g.linearRampToValueAtTime(1, t + 0.25);
+      }, 80);
+    }, 250);
+  }
+
   _ir(size) {
+    if (this._irCache.has(size)) return this._irCache.get(size);
+    const buf = this._irBuild(size);
+    if (this._irCache.size > 6) this._irCache.delete(this._irCache.keys().next().value);
+    this._irCache.set(size, buf);
+    return buf;
+  }
+
+  _irBuild(size) {
     const sr = this.ctx.sampleRate;
     const len = 0.5 + (size / 100) * 6.5;
     const N = Math.floor(sr * len), pre = Math.floor(sr * (0.008 + size / 100 * 0.025));
@@ -295,13 +327,13 @@ export class Synth {
     }
     tail.connect(this.layers[layer].in);
     for (const o of oscs) { o.start(time); o.stop(end); }
-    this._track(amp, end, tail);
+    this._track(amp, end, tail, time);
   }
 
   // Track voices so they can be silenced (live) and detached once finished,
   // which keeps the audio graph small during long renders.
-  _track(gainNode, end, out = gainNode) {
-    this.voices.push({ g: gainNode, end, out });
+  _track(gainNode, end, out = gainNode, start = 0) {
+    this.voices.push({ g: gainNode, end, out, start });
   }
   cleanup(now = this.ctx.currentTime) {
     const keep = [];
@@ -312,16 +344,26 @@ export class Synth {
     this.voices = keep;
   }
 
-  // Quickly fade every scheduled/active voice (seek, stop, regenerate).
-  silence(fade = 0.04) {
+  // Fade every scheduled/active voice, now or at a future time `at` (used for
+  // bar-quantized swaps). Voices that have not started yet are muted outright,
+  // so they can't pop in at full gain once their envelope is cancelled.
+  silence(fade = 0.04, at = null) {
     const now = this.ctx.currentTime;
+    const t = Math.max(now, at ?? now);
     for (const v of this.voices) {
-      if (v.end <= now) continue;
-      try { v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(v.g.gain.value, now); v.g.gain.setTargetAtTime(0, now, fade); } catch (e) { /* ignore */ }
-      v.end = Math.min(v.end, now + fade * 8);
+      if (v.end <= t) continue;
+      const g = v.g.gain;
+      if (!g) { if (v.start >= t) { try { v.out.disconnect(); } catch (e) { /* noop */ } v.end = t; } continue; }
+      try {
+        if (v.start >= t - 1e-4) { g.cancelScheduledValues(t); g.setValueAtTime(0, t); v.end = Math.min(v.end, t + 0.02); continue; }
+        if (typeof g.cancelAndHoldAtTime === 'function') g.cancelAndHoldAtTime(t);
+        else { g.cancelScheduledValues(t); if (t - now < 0.005) g.setValueAtTime(g.value, t); }
+        g.setTargetAtTime(0, t, fade);
+      } catch (e) { /* ignore */ }
+      v.end = Math.min(v.end, t + fade * 8);
     }
-    this.pumpGain.gain.cancelScheduledValues(now);
-    this.pumpGain.gain.setValueAtTime(1, now);
+    this.pumpGain.gain.cancelScheduledValues(t);
+    this.pumpGain.gain.setValueAtTime(1, t);
   }
 
   // ── Drums ─────────────────────────────────────────────────────────────
@@ -335,7 +377,7 @@ export class Synth {
     g.gain.setValueAtTime(0, time);
     g.gain.linearRampToValueAtTime(peak, time + attack);
     g.gain.exponentialRampToValueAtTime(0.0008, time + attack + decay);
-    this._track(g, time + attack + decay + 0.05);
+    this._track(g, time + attack + decay + 0.05, g, time);
     return g;
   }
   _filt(type, freq, q = 0.7) { const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = Math.min(freq, NYQ); f.Q.value = q; return f; }
@@ -379,7 +421,7 @@ export class Synth {
           const g = c.createGain();
           g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * 0.9, t + 0.001);
           g.gain.exponentialRampToValueAtTime(0.001, t + (i === 2 ? s.decay : 0.012));
-          src.connect(bp).connect(g).connect(out); this._track(g, t + 0.25);
+          src.connect(bp).connect(g).connect(out); this._track(g, t + 0.25, g, t);
         }
         break;
       }
@@ -420,7 +462,7 @@ export class Synth {
     const c = this.ctx, out = this.layers.ambience.in;
     const pan = hashPan(ev.t, ev.n);
     const p = c.createStereoPanner(); p.pan.value = pan * 0.8; p.connect(out);
-    this._track(p, time + (ev.k === 'thunder' ? 6 : ev.k === 'chimes' ? 5 : 2.5));
+    this._track(p, time + (ev.k === 'thunder' ? 6 : ev.k === 'chimes' ? 5 : 2.5), p, time);
     const blip = (t, f0, f1, sweep, att, dec, peak, type = 'sine') => {
       const o = c.createOscillator(); o.type = type;
       o.frequency.setValueAtTime(Math.min(NYQ, f0), t); o.frequency.exponentialRampToValueAtTime(Math.min(NYQ, f1), t + sweep);

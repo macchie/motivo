@@ -7,22 +7,39 @@ const DRUM_ROW = { kick: 2, taiko: 2, tomL: 2, snare: 1, clap: 1, rim: 1, perc: 
 const GUTTER = 88, RULER = 20, SECT = 24, CHORDS = 22;
 
 export class ArrangementView {
-  constructor(wrap, canvas, head, { onSeek } = {}) {
-    this.wrap = wrap; this.cv = canvas; this.hd = head; this.onSeek = onSeek;
+  constructor(wrap, canvas, head, { onSeek, onScrub } = {}) {
+    this.wrap = wrap; this.cv = canvas; this.hd = head; this.onSeek = onSeek; this.onScrub = onScrub;
     this.song = null; this.params = null; this.lastHead = -1;
     new ResizeObserver(() => { this.draw(); this.drawHead(this.lastBeat || 0, true); }).observe(wrap);
+    // Dragging only moves the playhead; audio seeks once on release, so
+    // scrubbing doesn't restart playback on every mouse move.
     let drag = false;
-    const seek = (e) => {
-      if (!this.song) return;
+    this.scrub = null;
+    const beatAt = (e) => {
       const r = this.wrap.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      if (x < GUTTER && !drag) return;
-      const beat = Math.max(0, (x - GUTTER) / (r.width - GUTTER - 12)) * this.song.totalBeats;
-      this.onSeek && this.onSeek(Math.min(beat, this.song.totalBeats - 0.01));
+      const beat = Math.max(0, (e.clientX - r.left - GUTTER) / (r.width - GUTTER - 12)) * this.song.totalBeats;
+      return Math.min(beat, this.song.totalBeats - 0.01);
     };
-    wrap.addEventListener('pointerdown', (e) => { const r = wrap.getBoundingClientRect(); if (e.clientX - r.left < GUTTER) return; drag = true; wrap.setPointerCapture(e.pointerId); seek(e); });
-    wrap.addEventListener('pointermove', (e) => { if (drag) seek(e); });
-    wrap.addEventListener('pointerup', () => { drag = false; });
+    wrap.addEventListener('pointerdown', (e) => {
+      if (!this.song) return;
+      const r = wrap.getBoundingClientRect(); if (e.clientX - r.left < GUTTER) return;
+      drag = true; wrap.setPointerCapture(e.pointerId);
+      this.scrub = beatAt(e); this.drawHead(this.scrub, true);
+      this.onScrub && this.onScrub(this.scrub);
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!drag || !this.song) return;
+      this.scrub = beatAt(e); this.drawHead(this.scrub, true);
+      this.onScrub && this.onScrub(this.scrub);
+    });
+    const end = () => {
+      if (!drag) return;
+      drag = false;
+      const b = this.scrub; this.scrub = null;
+      if (b != null && this.onSeek) this.onSeek(b);
+    };
+    wrap.addEventListener('pointerup', end);
+    wrap.addEventListener('pointercancel', end);
   }
 
   setSong(song, params) { this.song = song; this.params = params; this.draw(); }
@@ -30,7 +47,9 @@ export class ArrangementView {
   _prep(cv) {
     const r = this.wrap.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    // Only reallocate the backing store when the size actually changes.
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { g, W: r.width, H: r.height };
   }
@@ -162,6 +181,7 @@ export class ArrangementView {
   }
 
   drawHead(beat, force = false) {
+    if (this.scrub != null && beat !== this.scrub) return; // user is dragging the playhead
     this.lastBeat = beat;
     if (!this.song || !this.geom) return;
     const x = this.geom.x0 + beat * this.geom.ppb;

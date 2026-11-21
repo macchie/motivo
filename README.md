@@ -66,15 +66,17 @@ Every track is the result of **seed + parameters**. That means:
 
 ### 📦 Export
 - 🔊 **WAV**: 16/24-bit, 44.1/48 kHz, optional normalization and **embedded loop points** (`smpl` chunk).
-- 🎚️ **Stems**: one WAV per layer, kept balanced, ready for vertical layering.
+- 🎚️ **Stems**: one WAV per layer plus an optional matching mix. Stems skip the master compressor and saturation, so they sum back to that mix exactly in your engine.
 - 🎹 **MIDI**: Type-1 file with tempo, meter, section markers and General MIDI programs.
 - 💾 **Project**: a few hundred bytes of JSON (seed and parameters) that regenerate the exact track.
 
 ### 🖥️ Interface
 - Live spectrum showing the current and next chord.
-- Arrangement timeline with sections, chord symbols and a mini piano roll per layer. Click or drag to seek.
-- Library of saved tracks plus your 15 most recent generations.
-- Keyboard-first: `Space` · `G` · `R` · `E` · `Ctrl+S`.
+- Arrangement timeline with sections, chord symbols and a mini piano roll per layer. Click or drag to seek (audio jumps when you release).
+- Changes made while playing land on the next bar, so tweaking sounds like an edit rather than a cut.
+- Full **undo/redo** history: every parameter change, new seed, randomize, theme or load can be undone.
+- Library of saved tracks plus your 15 most recent generations. `Ctrl/⌘+S` updates the track you're working on; `Ctrl/⌘+Shift+S` saves a copy. Deleting can be undone.
+- Keyboard-first: `Space` · `G` · `R` · `E` · `Ctrl/⌘+S` · `Ctrl/⌘+Z`.
 
 👉 **Every control is explained in detail in [INSTRUCTIONS.md](INSTRUCTIONS.md).**
 
@@ -138,7 +140,8 @@ Ship the binary for your platform together with `resources.neu`, or use `make bu
 
 - **Composer and audio are separate.** The generator outputs plain data (note events in beats). The synth turns that data into sound, both live and offline.
 - **Forked randomness.** Each layer draws from its own sub-generator (`rng.fork('bass')`, `rng.fork('drums')`…), so changing one aspect never reshuffles the others.
-- **Look-ahead scheduler.** Live playback queues notes about 160 ms ahead, keeps its place when you regenerate, and switches evolving cycles without a gap.
+- **Look-ahead scheduler.** Live playback queues notes about 160 ms ahead (1.5 s while the window is hidden), driven by a worker timer that isn't throttled in the background. It keeps its place when you regenerate and swaps the new version in on the next bar.
+- **Composer in a worker.** Generation runs in a Web Worker (`gen.worker.js`), and evolving cycles are prepared in the background as soon as the previous one starts, so the audio path never waits for the composer.
 - **Chunked offline rendering.** Exports render in 2-second chunks using `OfflineAudioContext.suspend()`. Notes are created just ahead of the render position and finished voices are detached, so cost grows linearly even for 10-minute tracks.
 - **Seamless loops by pre-roll.** The loop is rendered twice and only the second pass is kept, so the tails of the end are already present at the start.
 
@@ -148,18 +151,22 @@ Ship the binary for your platform together with `resources.neu`, or use `make bu
 motivo/
 ├── Makefile, package.json      # dev tasks
 ├── neutralino.config.json      # window + native API allow-list
-├── tests/smoke.test.mjs        # node:test suite for the pure-JS core
+├── scripts/                    # golden-seed tooling (npm run golden)
+├── tests/                      # node:test suites: smoke tests + golden seeds
 └── resources/
     ├── index.html · css/app.css · fonts/ · icons/
     └── js/
         ├── main.js             # UI controller (inspector, mixer, library, export)
-        ├── ui/                 # arrangement view, visualizer, icons, Neutralino wrapper
+        ├── ui/                 # arrangement view, visualizer, icons, undo history, Neutralino wrapper
         └── core/
             ├── rng.js          # seeded, forkable PRNG
             ├── theory.js       # scales, chords, voice leading, spelling
             ├── styles.js       # genre definitions + default parameters
             ├── presets.js      # theme presets
-            ├── generator.js    # the composer
+            ├── generator.js    # the composer (+ GENERATOR_VERSION, planLength)
+            ├── gen.worker.js   # runs the composer off the main thread (genclient.js wraps it)
+            ├── params.js       # preset / saved-data normalisation shared with tests
+            ├── ticker.js       # worker-based scheduler clock
             ├── instruments.js  # instruments, kits, beds, details
             ├── synth.js        # Web Audio synthesis + FX graph
             ├── engine.js       # live player + offline renderer
@@ -185,7 +192,8 @@ motivo/
 | 🔇 No sound on Linux | WebKitGTK plays Web Audio through GStreamer: `sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good` |
 | 🪟 Window doesn't open on Linux | Install WebKitGTK: `sudo apt install libwebkit2gtk-4.1-0` (or `-4.0-37` on older distros) |
 | ❓ `bin/` missing after cloning | Run `make install` (or `make update` to force a fresh download) |
-| 🐢 Long exports are slow | Rendering is faster than real time but scales with length. Evolving exports render every cycle, so lower *Cycles to export* |
+| 🐢 Long exports are slow | Rendering is faster than real time but scales with length. Evolving exports render every cycle, so lower *Cycles to export*. The export dialog shows the expected size and warns about very large renders; **Cancel** stops a render at any time |
+| 💾 Where is my library? | In your user data folder (`dataLocation: "system"`), e.g. `~/Library/Application Support/io.motivo.app` on macOS or `~/.local/share/io.motivo.app` on Linux. Data from older versions (stored next to the app) is migrated on first launch. Use *Library → Backup* for a portable copy |
 
 ---
 
@@ -219,6 +227,10 @@ Contributions of every size are appreciated: new genres, instruments, presets, b
 **Code style:** plain modern JavaScript (ES2020+), no build step, 2-space indent. Keep the core in `js/core/` free of DOM access so it stays testable in Node.
 
 ---
+
+### 🔒 Seeds are a promise
+
+The same seed and parameters must always produce the same track, because saved libraries and `.motivo.json` projects store only those. `tests/golden.test.mjs` fails if a change alters the output of a set of reference seeds. If the change is intentional, bump `GENERATOR_VERSION` in `resources/js/core/generator.js` and run `npm run golden` (or `make golden`). Tracks saved with an older version show a warning when loaded.
 
 ## 📄 License
 

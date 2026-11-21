@@ -6,14 +6,8 @@ import { STYLES, DEFAULT_PARAMS, applyStyle, LAYER_IDS } from '../resources/js/c
 import { PRESETS } from '../resources/js/core/presets.js';
 import { TIME_SIGS } from '../resources/js/core/theory.js';
 import { encodeWAV, encodeMIDI } from '../resources/js/core/export.js';
-
-const presetParams = (pr) => {
-  const p = applyStyle(structuredClone(DEFAULT_PARAMS), pr.params.style, { keepMood: false });
-  const { layers, ...rest } = pr.params;
-  Object.assign(p, rest);
-  if (layers) for (const [id, v] of Object.entries(layers)) Object.assign(p.layers[id], v);
-  return p;
-};
+import { presetParams, normalizeParams, normalizeEntry } from '../resources/js/core/params.js';
+import { planLength } from '../resources/js/core/generator.js';
 
 function assertValidSong(s, label) {
   assert.ok(s.totalBars > 0 && s.totalBeats > 0 && s.duration > 0, `${label}: empty song`);
@@ -80,4 +74,35 @@ test('MIDI encoder produces a Type-1 file', () => {
   const found = new TextDecoder('latin1').decode(bytes).split('MTrk').length - 1;
   assert.equal(found, tracks);
   assert.ok(tracks >= 3);
+});
+
+test('planLength matches the generated song length', () => {
+  for (const mode of ['loop', 'oneshot', 'evolve']) {
+    for (const length of [8, 45, 90, 600]) {
+      const p = applyStyle(structuredClone(DEFAULT_PARAMS), 'cinematic');
+      Object.assign(p, { mode, length, seed: `len-${mode}-${length}` });
+      assert.equal(planLength(p).bars, generateSong(p).totalBars, `${mode}/${length}`);
+    }
+  }
+});
+
+test('normalizeParams / normalizeEntry reject junk and repair partial data', () => {
+  assert.equal(normalizeParams(null), null);
+  assert.equal(normalizeParams({ style: 'nope' }), null);
+  const p = normalizeParams({ style: 'lofi', energy: 'abc', layers: { lead: { vol: 0.2 } } });
+  assert.equal(p.energy, applyStyle(structuredClone(DEFAULT_PARAMS), 'lofi', { keepMood: false }).energy);
+  assert.equal(p.layers.lead.vol, 0.2);
+  for (const id of LAYER_IDS) assert.ok(p.layers[id], id);
+  assert.equal(normalizeEntry({ name: 'x' }), null);
+  assert.ok(normalizeEntry({ params: { style: 'folk' } }));
+});
+
+test('MIDI export honours solo like playback does', () => {
+  const p = presetParams(PRESETS.find((x) => x.id === 'battle')); p.seed = 'solo';
+  const s = generateSong(p);
+  const count = () => { const b = new Uint8Array(encodeMIDI(s, p)); return (b[10] << 8) | b[11]; };
+  const all = count();
+  p.layers.lead.solo = true;
+  assert.equal(count(), 2, 'tempo track + soloed lead only');
+  assert.ok(all > 2);
 });

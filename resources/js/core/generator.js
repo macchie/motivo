@@ -47,6 +47,29 @@ function resolveHR(hr, st, E) {
   return h;
 }
 
+// Bump whenever a change makes existing seeds produce different music, then
+// run `npm run golden`. Saved tracks record the version they were made with.
+export const GENERATOR_VERSION = 1;
+
+// Bars actually produced for a target length: loops round to whole 4-bar
+// phrases, one-shots to even bars, so the result can differ from the target.
+export function planLength(params) {
+  const ts = TIME_SIGS[params.timeSig] || TIME_SIGS['4/4'];
+  const barSec = (ts.steps / 4) * 60 / params.bpm;
+  const totalTarget = Math.max(1, Math.round(params.length / barSec));
+  let intro = 0, outro = 0, body;
+  if (params.mode === 'oneshot') {
+    intro = Math.min(params.intro, Math.floor(totalTarget / 4));
+    outro = Math.min(params.outro, Math.floor(totalTarget / 3));
+    body = Math.max(2, totalTarget - intro - outro);
+    if (body >= 8) body = Math.round(body / 2) * 2;
+  } else {
+    body = Math.max(4, Math.round(totalTarget / 4) * 4);
+  }
+  const bars = intro + body + outro;
+  return { intro, outro, body, bars, barSec, seconds: bars * barSec };
+}
+
 export function generateSong(params, opts = {}) {
   const cycle = opts.cycle || 0;
   const st = STYLES[params.style] || STYLES.ambient;
@@ -73,18 +96,8 @@ export function generateSong(params, opts = {}) {
 
   // ── Length & form ───────────────────────────────────────────────────────
   const bpm = params.bpm;
-  const barSec = beatsPerBar * 60 / bpm;
   const oneshot = params.mode === 'oneshot';
-  const totalTarget = Math.max(1, Math.round(params.length / barSec));
-  let intro = 0, outro = 0, body;
-  if (oneshot) {
-    intro = Math.min(params.intro, Math.floor(totalTarget / 4));
-    outro = Math.min(params.outro, Math.floor(totalTarget / 3));
-    body = Math.max(2, totalTarget - intro - outro);
-    if (body >= 8) body = Math.round(body / 2) * 2;
-  } else {
-    body = Math.max(4, Math.round(totalTarget / 4) * 4);
-  }
+  const { intro, outro, body } = planLength(params);
   const form = resolveForm(params.form, body, rng.fork('form'));
   const hr = resolveHR(params.harmRhythm, st, E);
 
@@ -661,7 +674,7 @@ export function generateSong(params, opts = {}) {
   }
 
   return {
-    params: structuredClone(params), cycle, seed: params.seed, style: params.style, styleName: st.name,
+    params: structuredClone(params), generatorVersion: GENERATOR_VERSION, cycle, seed: params.seed, style: params.style, styleName: st.name,
     mode: params.mode, loop: !oneshot,
     bpm, timeSig: ts.label, stepsPerBar: SPB, beatsPerBar, groups: ts.groups,
     keyPc, keyName: pcName(keyPc, flats), scaleId, scaleName: SCALES[scaleId].name,

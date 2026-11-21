@@ -17,15 +17,15 @@
           <span>Motivo</span>
         </div>
         <div class="vsep"></div>
-        <input id="trackName" class="track-name" spellcheck="false" maxlength="60" title="Track name">
+        <input id="trackName" class="track-name" spellcheck="false" maxlength="60" title="Track name" aria-label="Track name">
       </div>
 
       <div class="tb-center">
         <div class="transport">
-          <button class="tbtn" id="btnBack" title="Back to start (Home)"></button>
-          <button class="play-btn" id="btnPlay" title="Play / Pause (Space)"></button>
-          <button class="tbtn" id="btnStop" title="Stop"></button>
-          <button class="tbtn toggle" id="btnRepeat" title="Repeat one-shot preview"></button>
+          <button type="button" class="tbtn" id="btnBack" title="Back to start (Home)"></button>
+          <button type="button" class="play-btn" id="btnPlay" title="Play / Pause (Space)" aria-label="Play"></button>
+          <button type="button" class="tbtn" id="btnStop" title="Stop"></button>
+          <button type="button" class="tbtn toggle" id="btnRepeat" title="Repeat one-shot preview"></button>
         </div>
         <div class="time">
           <div class="t-main"><span id="tPos">0:00</span><span class="t-dim"> / <span id="tLen">0:00</span></span></div>
@@ -34,32 +34,36 @@
       </div>
 
       <div class="tb-right">
+        <div class="hist" role="group" aria-label="History">
+          <button type="button" class="btn icon ghost" id="btnUndo" disabled></button>
+          <button type="button" class="btn icon ghost" id="btnRedo" disabled></button>
+        </div>
         <div class="seed" title="Seed — same seed + parameters = same track">
           <span class="seed-l">SEED</span>
-          <input id="seedInput" spellcheck="false">
-          <button class="seed-dice" id="btnDice" title="New seed (G)"></button>
+          <input id="seedInput" spellcheck="false" aria-label="Seed">
+          <button type="button" class="seed-dice" id="btnDice" title="New seed (G)"></button>
         </div>
-        <button class="btn primary" id="btnGenerate" title="Generate a new variation (G)"></button>
-        <button class="btn icon" id="btnSave" title="Save to library (Ctrl+S)"></button>
-        <button class="btn" id="btnExport" title="Export (E)"></button>
+        <button type="button" class="btn primary" id="btnGenerate" title="Generate a new variation (G)"></button>
+        <button type="button" class="btn icon" id="btnSave" title="Save to library"></button>
+        <button type="button" class="btn" id="btnExport" title="Export (E)"></button>
       </div>
     </header>
 
     <!-- ── Main ────────────────────────────────────────────── -->
     <main class="main">
       <aside class="sidebar">
-        <div class="tabs">
-          <button class="tab active" data-tab="themes">Themes</button>
-          <button class="tab" data-tab="library">Library <span class="badge" id="libCount">0</span></button>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-tab="themes" role="tab" aria-selected="true" aria-controls="pane-themes">Themes</button>
+          <button type="button" class="tab" data-tab="library" role="tab" aria-selected="false" aria-controls="pane-library">Library <span class="badge" id="libCount">0</span></button>
         </div>
         <div class="tab-pane" id="pane-themes">
-          <div class="search"><span id="searchIc"></span><input id="presetSearch" placeholder="Search themes…" spellcheck="false"></div>
+          <div class="search"><span id="searchIc"></span><input id="presetSearch" placeholder="Search themes…" spellcheck="false" aria-label="Search themes"></div>
           <div class="preset-list" id="presetList"></div>
         </div>
         <div class="tab-pane hidden" id="pane-library">
           <div class="lib-actions">
-            <button class="btn sm" id="btnImport"></button>
-            <button class="btn sm" id="btnExportLib"></button>
+            <button type="button" class="btn sm" id="btnImport" title="Import a project or a library backup"></button>
+            <button type="button" class="btn sm" id="btnExportLib" title="Save a backup of your library"></button>
           </div>
           <div class="lib-scroll">
             <div class="group-h">Saved tracks</div>
@@ -120,8 +124,8 @@
         <div class="insp-h">
           <div class="insp-title"><span id="inspIc"></span>Parameters</div>
           <div class="insp-actions">
-            <button class="btn icon sm" id="btnRandomize" title="Randomize mood (R)"></button>
-            <button class="btn icon sm" id="btnResetStyle" title="Reset to genre defaults"></button>
+            <button type="button" class="btn icon sm" id="btnRandomize" title="Randomize mood (R)"></button>
+            <button type="button" class="btn icon sm" id="btnResetStyle" title="Reset to genre defaults"></button>
           </div>
         </div>
         <label class="autoregen" title="Regenerate automatically when composition parameters change">
@@ -133,20 +137,17 @@
     </main>
 
     <footer class="statusbar">
-      <div class="sb-left"><span class="dot" id="audioDot"></span><span id="statusText">Ready</span></div>
-      <div class="sb-right">
-        <span><kbd>Space</kbd> play</span><span><kbd>G</kbd> generate</span><span><kbd>R</kbd> randomize</span>
-        <span><kbd>E</kbd> export</span><span><kbd>Ctrl</kbd>+<kbd>S</kbd> save</span>
-      </div>
+      <div class="sb-left"><span class="dot" id="audioDot"></span><span id="statusText" role="status" aria-live="polite">Ready</span></div>
+      <div class="sb-right" id="statusKeys"></div>
     </footer>
   </div>
 
   <!-- ── Export dialog ─────────────────────────────────────── -->
   <div class="modal-bg" id="exportModal">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exTitle">
       <div class="modal-h">
-        <div><div class="modal-title">Export</div><div class="modal-sub" id="exSub"></div></div>
-        <button class="btn icon ghost" id="exClose"></button>
+        <div><div class="modal-title" id="exTitle">Export</div><div class="modal-sub" id="exSub"></div></div>
+        <button type="button" class="btn icon ghost" id="exClose" title="Close"></button>
       </div>
       <div class="modal-b">
         <div class="formats" id="exFormats"></div>
@@ -155,13 +156,13 @@
         <div class="progress hidden" id="exProgress"><i></i><span>Rendering…</span></div>
       </div>
       <div class="modal-f">
-        <button class="btn" id="exCancel">Cancel</button>
-        <button class="btn primary" id="exGo">Export</button>
+        <button type="button" class="btn" id="exCancel">Cancel</button>
+        <button type="button" class="btn primary" id="exGo">Export</button>
       </div>
     </div>
   </div>
 
-  <div class="toasts" id="toasts"></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <script src="/js/neutralino.js"></script>
   <script type="module" src="/js/main.js"></script>

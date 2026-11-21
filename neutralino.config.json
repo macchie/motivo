@@ -9,16 +9,23 @@
   "enableServer": true,
   "enableNativeAPI": true,
   "tokenSecurity": "one-time",
+  "dataLocation": "system",
   "logging": {
     "enabled": true,
     "writeToLogFile": false
   },
   "nativeAllowList": [
-    "app.*",
-    "os.*",
-    "window.*",
-    "filesystem.*",
-    "storage.*",
+    "app.exit",
+    "os.showSaveDialog",
+    "os.showOpenDialog",
+    "os.showFolderDialog",
+    "os.getPath",
+    "filesystem.readFile",
+    "filesystem.writeFile",
+    "filesystem.writeBinaryFile",
+    "filesystem.appendBinaryFile",
+    "storage.getData",
+    "storage.setData",
     "debug.log"
   ],
   "modes": {
