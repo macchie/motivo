@@ -1,0 +1,63 @@
+name: Pages
+
+# Builds the landing page (scripts/build-site.mjs) and deploys it to GitHub
+# Pages. It redeploys when the site sources change on master, after a release
+# finishes, and whenever a release is published or edited on github.com — each
+# rebuild bakes in the latest release version, download sizes and latest.json.
+# One-time setup: Settings → Pages → Source: GitHub Actions.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'site/**'
+      - 'scripts/build-site.mjs'
+      - '.github/workflows/pages.yml'
+  release:
+    types: [published, edited]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; never cancel it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    # Skip when a Release run finished unsuccessfully; always build on the other triggers.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build _site/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # higher API rate limit for the release lookup
+        run: npm run site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

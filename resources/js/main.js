@@ -10,11 +10,13 @@ import { SCALES, NOTE_NAMES, NOTE_SHARPS, NOTE_FLATS, TIME_SIGS } from './core/t
 import { KITS, BEDS, SPRINKLES, instrumentsFor } from './core/instruments.js';
 import { randomSeed, RNG } from './core/rng.js';
 import { icon } from './ui/icons.js';
-import { initNative, saveFile, folderWriter, openTextFile, store, isMac, setStoreErrorHandler } from './ui/native.js';
+import { initNative, saveFile, folderWriter, openTextFile, store, isMac, setStoreErrorHandler, openExternal, platform, appVersion } from './ui/native.js';
 import { ArrangementView } from './ui/arrangement.js';
 import { Visualizer } from './ui/visualizer.js';
 import { History } from './ui/history.js';
 import { Wizard } from './ui/wizard.js';
+import { Updater } from './ui/updater.js';
+import { APP_VERSION } from './version.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -37,7 +39,7 @@ const state = { params: null, song: null, autoRegen: true, stale: false, library
 const gen = new GenClient();
 const player = new Player({ generate: (p, o) => gen.generate(p, o) });
 const history = new History();
-let arrangement, viz, wizard;
+let arrangement, viz, wizard, updater;
 
 // ── Parameter schema ─────────────────────────────────────────────────────
 const LENGTHS = [8, 10, 12, 15, 20, 25, 30, 40, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300, 360, 420, 480, 600];
@@ -954,6 +956,7 @@ async function boot() {
   });
   player.on('cycle', (n, song) => { arrangement.setSong(song, state.params); updateHero(); status(`Evolving · cycle ${n + 1}`); kick(); });
   setupWizard();
+  updater = new Updater({ version: appVersion(APP_VERSION), ...platform(), openUrl: openExternal, toast, badge: $('#btnVersion') });
   const saved = normalizeParams(await store.get('session', null));
   if (saved) { state.params = saved; syncAll(); await regenerate(); }
   else await applyPreset(PRESETS.find((x) => x.id === 'forest'), { recordHistory: false });
@@ -1016,6 +1019,7 @@ async function boot() {
 
   document.addEventListener('keydown', (e) => {
     if (wizard?.isOpen) { wizard.onKey(e); return; }
+    if (updater?.isOpen) { updater.onKey(e); return; }
     const el = document.activeElement;
     const textEntry = /INPUT|SELECT|TEXTAREA/.test(el?.tagName) && el.type !== 'range' && el.type !== 'checkbox';
     const mod = e.ctrlKey || e.metaKey;
@@ -1039,6 +1043,7 @@ async function boot() {
   });
 
   labelIconButtons();
+  updater.start();
   kick();
   status('Ready — pick a theme or press Space to play');
 }

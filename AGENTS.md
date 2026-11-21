@@ -13,7 +13,8 @@ Guidance for AI coding agents (and humans) working on **Motivo**, a Neutralinojs
 | Re-record golden seeds | `npm run golden` (only after bumping `GENERATOR_VERSION`) |
 | Release build (all platforms) | `make build` / `make build-embed` |
 | macOS app / sign / dmg (on a Mac) | `make mac-release` (see `scripts/macos.sh`) |
-| Publish a release | push a `vX.Y.Z` tag → `.github/workflows/release.yml` |
+| Publish a release | `make release-patch` / `-minor` / `-major` / `-rc` (preview: `make release-dry BUMP=minor`) |
+| Build / preview the website | `make site` / `make site-serve` |
 
 Always run `npm test` before finishing a change. There is no linter or bundler: check syntax with `node --check <file>`.
 
@@ -23,6 +24,7 @@ Always run `npm test` before finishing a change. There is no linter or bundler: 
 resources/
   index.html, css/app.css         # single page, dark theme, CSS variables
   js/main.js                      # UI controller: inspector, mixer, library, export, undo, wiring
+  js/version.js                   # APP_VERSION — the single source the release script keeps in sync
   js/core/                        # pure logic, no DOM (except engine/synth, which use Web Audio)
     generator.js                  # the composer; exports GENERATOR_VERSION and planLength()
     gen.worker.js, genclient.js   # composer in a Web Worker + promise client with fallback
@@ -31,12 +33,14 @@ resources/
     ticker.js                     # worker-based scheduler clock
     params.js                     # presetParams / normalizeParams / normalizeEntry (shared with tests)
     wizard.js                     # new-track wizard: answers → parameters
+    updates.js                    # update checks: semver compare, release parsing, asset choice, safe notes
     styles.js, presets.js, instruments.js, theory.js, rng.js, export.js
   js/ui/                          # arrangement view, visualizer, icons, history (undo), wizard dialog, native.js
 tests/                            # node:test suites (*.test.mjs) + golden.json
 scripts/                          # golden-seed tooling, macos.sh (app bundle, signing, notarization, dmg)
 packaging/macos/                  # Info.plist template + entitlements
-site/                             # landing page for GitHub Pages; site/assets/screenshots/ also used by README
+site/                             # landing page source; scripts/build-site.mjs builds it into _site/ (+ latest.json)
+CHANGELOG.md                      # "## Unreleased" notes become the next release's notes
 .github/workflows/                # ci.yml (tests), release.yml (builds + GitHub release), pages.yml (site)
 ```
 
@@ -96,7 +100,10 @@ Purely internal refactors with no visible effect don't need doc changes. When in
 
 ## Releases and packaging
 
-- Release asset names are a contract with the landing page and README links: `Motivo-macOS.dmg`, `Motivo-Windows-x64.zip`, `Motivo-Linux-{x64,arm64,armhf}.tar.gz`. Change them everywhere at once or not at all.
+- Never bump versions by hand: `scripts/release.mjs` updates `package.json`, `package-lock.json`, `neutralino.config.json` and `resources/js/version.js` together (a test checks they match).
+- Add user-facing changes to `CHANGELOG.md` under `## Unreleased` in the same change; the release script moves them into the new version and CI uses that section as the release notes.
+- The app's update check reads `releases/latest` from the GitHub API, falling back to the site's `latest.json`. Keep `normalizeRelease` (core/updates.js) and `scripts/build-site.mjs` agreeing on its fields. Pre-releases (tags with `-`) are never offered.
+- Release asset names are a contract with the landing page, README links and the update check (`ASSET_NAMES` in core/updates.js): `Motivo-macOS.dmg`, `Motivo-Windows-x64.zip`, `Motivo-Linux-{x64,arm64,armhf}.tar.gz`. Change them everywhere at once or not at all.
 - Release builds embed resources (`--embed-resources`); the macOS `.app` wraps the universal binary.
 - Never commit signing certificates, passwords or notary credentials; CI reads them from repository secrets.
 

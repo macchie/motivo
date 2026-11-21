@@ -3,6 +3,24 @@
 
 export const isNative = () => typeof window.Neutralino !== 'undefined' && typeof window.NL_OS !== 'undefined';
 export const isMac = () => (isNative() ? window.NL_OS === 'Darwin' : /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
+// Opens a web link in the user's default browser.
+export function openExternal(url) {
+  if (!/^https?:\/\//.test(url)) return;
+  if (isNative()) Neutralino.os.open(url).catch((e) => console.warn('os.open failed', e));
+  else window.open(url, '_blank', 'noopener');
+}
+
+// { os: 'Darwin' | 'Windows' | 'Linux', arch: 'x64' | 'arm64' | 'arm' } — used to pick the right download.
+export function platform() {
+  if (isNative()) return { os: window.NL_OS, arch: window.NL_ARCH || 'x64' };
+  const ua = navigator.userAgent;
+  const os = /Mac/.test(ua) ? 'Darwin' : /Win/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
+  return { os, arch: /aarch64|arm64/i.test(ua) ? 'arm64' : 'x64' };
+}
+
+// The running app's version: the native runtime's when packaged, else version.js.
+export const appVersion = (fallback) => (isNative() && window.NL_APPVERSION) || fallback;
+
 const sep = () => (window.NL_OS === 'Windows' ? '\\' : '/');
 
 // Called with (key, error) whenever a write to persistent storage fails.

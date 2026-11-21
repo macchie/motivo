@@ -22,8 +22,9 @@ This guide explains every part of Motivo: what each control does, how the compos
 14. [📦 Exporting](#-exporting)
 15. [🎮 Using the music in your game](#-using-the-music-in-your-game)
 16. [⌨️ Keyboard shortcuts](#%EF%B8%8F-keyboard-shortcuts)
-17. [💡 Recipes and tips](#-recipes-and-tips)
-18. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
+17. [🔔 Updates](#-updates)
+18. [💡 Recipes and tips](#-recipes-and-tips)
+19. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
 ---
 
 ## 💻 Installing and first launch
@@ -153,7 +154,7 @@ Every track has seven layers, each with its own color across the whole UI:
 | ⬇️ **Export** | Opens the export dialog (<kbd>E</kbd>). |
 
 ### Status bar
-Shows whether audio is playing, the sample rate, and generation statistics (bars, number of note events, generation time in ms), plus a shortcut reminder.
+Shows whether audio is playing, the sample rate, and generation statistics (bars, number of note events, generation time in ms), plus a shortcut reminder. On the far right, the **version badge** (`v1.0.0`) opens *About Motivo & updates*; it turns amber and reads **Update x.y.z** when a newer version is out (see [Updates](#-updates)).
 
 ---
 
@@ -481,6 +482,20 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 
 ---
 
+## 🔔 Updates
+
+Motivo checks for new versions on GitHub a few seconds after it starts, every few hours while it's open, and when you come back to it after a while. Nothing is downloaded or installed automatically.
+
+- When a new version is out, the **version badge** in the status bar turns amber and a notice appears once. Click either to see **what's new**.
+- **Download for …** gets the right file for your computer (macOS, Windows, or Linux on x64 / ARM). Replace your current copy of Motivo with the new one; your library, recent tracks and session are stored separately and are kept.
+- **Skip this version** hides the notice until a newer one comes out. **Release page** opens the full notes on GitHub.
+- Click the badge any time to **Check now**, or turn off **Check for updates automatically**.
+- Test builds (pre-releases such as `1.3.0-rc.1`) are never offered.
+
+The check only asks GitHub (or the Motivo website) for the latest version number and notes; it sends no data about you or your tracks. Offline, it quietly tries again later.
+
+---
+
 ## 💡 Recipes and tips
 
 - 🧘 **Calmer menu music**: Energy ≤ 25, Density ≤ 35, Rests 50 %, and mute Drums.
@@ -498,6 +513,9 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 
 **🍎 macOS says Motivo “can't be opened” or that Apple “could not verify” it.**
 The build isn't notarized by Apple. See [Installing and first launch](#-installing-and-first-launch): use *Open Anyway* in *Privacy & Security*, or `xattr -dr com.apple.quarantine /Applications/Motivo.app`.
+
+**🔔 "Couldn't check for updates".**
+You're offline or GitHub is unreachable. Motivo tries again later; you can also download new versions from the [releases page](https://github.com/macchie/motivo/releases).
 
 **🔇 I hear nothing.**
 Press play once: browsers and webviews only start audio after a user action. On Linux, install GStreamer plugins: `sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good`. Also check that no layer is soloed by mistake.

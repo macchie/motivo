@@ -40,3 +40,10 @@ Desktop.ini
 .idea/
 *.swp
 *~
+
+# Tooling scratch output (not part of the project)
+Claude outputs/
+motivo-protected-files.zip
+
+# Built website (`make site`)
+_site/

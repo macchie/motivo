@@ -1,0 +1,128 @@
+name: Release
+
+# Pushing a version tag (made by `make release-*`) builds every platform and
+# publishes the GitHub release. Running it by hand only uploads the packages as
+# build artifacts. The macOS job cross-packages Windows and Linux too, because
+# `neu build` ships prebuilt binaries for every platform.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & publish
+    runs-on: macos-latest
+    env:
+      # Optional signing / notarization — empty when the secrets aren't set,
+      # in which case scripts/macos.sh falls back to an ad-hoc signature.
+      MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+      MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+      MAC_SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags for release notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download Neutralino binaries
+        run: npm run setup
+
+      - name: Test
+        run: npm test
+
+      - name: Build (resources embedded)
+        run: npm run build:embed
+
+      - name: Resolve version
+        id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v$(node -p "require('./neutralino.config.json').version")"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          # Tags with a suffix (v1.2.0-rc.1) ship as pre-releases.
+          [[ "$TAG" == *-* ]] && echo "prerelease=true" >> "$GITHUB_OUTPUT" || echo "prerelease=false" >> "$GITHUB_OUTPUT"
+
+      - name: Import signing certificate
+        if: env.MAC_CERT_P12 != ''
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          PASS="$(openssl rand -base64 24)"
+          security create-keychain -p "$PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$PASS" "$KEYCHAIN"
+          echo "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PASS" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+
+      - name: Package macOS .dmg
+        run: scripts/macos.sh release
+
+      - name: Package Windows & Linux
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          cp dist/Motivo-macOS.dmg dist/release/
+
+          # Windows: a zip holding the self-contained exe.
+          cp dist/motivo/motivo-win_x64.exe "$RUNNER_TEMP/Motivo.exe"
+          ( cd "$RUNNER_TEMP" && zip -q -j Motivo-Windows-x64.zip Motivo.exe )
+          mv "$RUNNER_TEMP/Motivo-Windows-x64.zip" dist/release/
+
+          # Linux: one tar.gz per architecture, binary named "motivo".
+          package_linux() {
+            local stage; stage="$(mktemp -d)"
+            cp "dist/motivo/$1" "$stage/motivo"
+            chmod +x "$stage/motivo"
+            tar -czf "dist/release/$2" -C "$stage" motivo
+            rm -rf "$stage"
+          }
+          package_linux motivo-linux_x64   Motivo-Linux-x64.tar.gz
+          package_linux motivo-linux_arm64 Motivo-Linux-arm64.tar.gz
+          package_linux motivo-linux_armhf Motivo-Linux-armhf.tar.gz
+
+      - name: Checksums
+        run: ( cd dist/release && shasum -a 256 * > checksums.txt && cat checksums.txt )
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: motivo-${{ steps.v.outputs.version }}
+          path: dist/release/*
+          if-no-files-found: error
+
+      - name: Compose release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/release.mjs notes "${{ steps.v.outputs.version }}" > "$RUNNER_TEMP/notes.md"
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.v.outputs.tag }}" dist/release/* \
+            --title "Motivo ${{ steps.v.outputs.tag }}" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes \
+            ${{ steps.v.outputs.prerelease == 'true' && '--prerelease' || '' }}

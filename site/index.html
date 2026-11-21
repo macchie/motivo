@@ -344,6 +344,8 @@
     </div>
   </footer>
 
+  <!-- Filled with the latest GitHub release by scripts/build-site.mjs (false = no release yet). -->
+  <script type="application/json" id="release-data">null</script>
   <script>
     // Highlight the visitor's platform and point the hero button at the right file.
     (function () {
@@ -360,10 +362,13 @@
         hero.href = a.href;
         document.getElementById('heroDlLabel').innerHTML = `Download for ${names[os]}`;
       }
-      // Show the latest version and file sizes when a release exists.
-      fetch('https://api.github.com/repos/macchie/motivo/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      // Latest version and file sizes: baked in by scripts/build-site.mjs at
+      // deploy time; when previewing the raw page, ask the GitHub API instead.
+      const baked = JSON.parse(document.getElementById('release-data').textContent || 'null');
+      (baked !== null && baked !== undefined ? Promise.resolve(baked) : fetch('https://api.github.com/repos/macchie/motivo/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status))))
         .then((rel) => {
+          if (!rel || !rel.tag_name) return Promise.reject('no release');
           const v = rel.tag_name;
           document.getElementById('heroVersion').textContent = `Version ${v.replace(/^v/, '')}`;
           document.getElementById('dlVersion').textContent = `Motivo ${v}`;

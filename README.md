@@ -108,6 +108,7 @@ Get the latest build for your platform from the **[releases page](https://github
 </tr>
 </table>
 
+- 🔔 **Update notices**: the version badge in the status bar lights up when a new release is out, with release notes and a one-click download for your system.
 - 🧭 **New track wizard** (`N`): five quick steps for beginners — what the music is for, a theme or genre, a mood pad (calm↔intense, dark↔bright) and tempo, a length — then pick your favourite of three variations. Everything stays editable in the Parameters panel. Opens automatically on first launch.
 - Live spectrum showing the current and next chord.
 - Arrangement timeline with sections, chord symbols and a mini piano roll per layer. Click or drag to seek (audio jumps when you release).
@@ -147,6 +148,8 @@ Then click a theme, press <kbd>Space</kbd>, and press <kbd>G</kbd> for new varia
 | `make build-embed` | `npm run build:embed` | Build single-file binaries with resources embedded |
 | `make golden` | `npm run golden` | Re-record the golden seeds (only after bumping `GENERATOR_VERSION`) |
 | `make mac-release` | | macOS: build, sign and package `dist/Motivo-macOS.dmg` (see below) |
+| `make release-minor` … | `npm run release -- minor` | Bump, changelog, tag and push a new version (see [Publishing a release](#-publishing-a-release)) |
+| `make site` / `make site-serve` | `npm run site` | Build / preview the website |
 | `make clean` / `make distclean` | `npm run clean` | Remove build output (`distclean` also removes `node_modules` and `bin`) |
 
 Run `make` with no arguments to print this list.
@@ -190,20 +193,34 @@ make mac-release \
 
 ### 🚢 Publishing a release
 
-Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)). Push a version tag and the workflow tests, builds every platform, packages the macOS `.dmg` on a Mac runner and publishes a GitHub release with checksums:
+Write release notes under **Unreleased** in [`CHANGELOG.md`](CHANGELOG.md) as you work, then cut the release from an up-to-date, clean `master`:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+make release-dry BUMP=minor   # preview: next version and the notes that will be used
+make release-minor            # or release-patch, release-major, release-rc, release V=2.0.0
 ```
 
-The version in the tag is written into the app. Running the workflow by hand (*Actions → Release → Run workflow*) builds the packages as downloadable artifacts without publishing a release.
+[`scripts/release.mjs`](scripts/release.mjs) runs the tests, bumps the version in `package.json`, `package-lock.json`, `neutralino.config.json` and `resources/js/version.js`, moves the *Unreleased* notes into a new CHANGELOG section (or lists the commit subjects if you didn't write any), commits `Release vX.Y.Z`, tags it and pushes. It refuses to run with uncommitted changes, off `master`, behind `origin`, or if the tag already exists. `npm run release -- minor` does the same without Make.
+
+The pushed tag starts [`.github/workflows/release.yml`](.github/workflows/release.yml): it tests, builds every platform, packages the macOS `.dmg` on a Mac runner and publishes a GitHub release with the CHANGELOG section, GitHub's generated notes and checksums. Tags with a suffix (`v1.3.0-rc.1`) become **pre-releases**, which the app and the website ignore — use `make release-rc` to test the pipeline. Running the workflow by hand (*Actions → Release → Run workflow*) only builds the packages as artifacts.
 
 To sign and notarize the macOS build in CI, add these repository secrets: `MAC_CERT_P12` (base64 of your Developer ID `.p12`), `MAC_CERT_PASSWORD`, `MAC_SIGN_IDENTITY`, and for notarization `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` (an [app-specific password](https://support.apple.com/102654)). Without them the app is ad-hoc signed.
 
 ### 🌐 Website
 
-The landing page lives in [`site/`](site/) and is deployed to GitHub Pages by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) whenever `site/` changes on `master`. One-time setup: *Settings → Pages → Build and deployment → Source: GitHub Actions*. Its download buttons always point at the latest release.
+The landing page lives in [`site/`](site/). [`scripts/build-site.mjs`](scripts/build-site.mjs) builds it into `_site/`, baking in the latest release (version, file sizes) and writing `latest.json`, which the app uses as a fallback for its update check. It also adds a 404 page, `robots.txt` and a sitemap.
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) builds and deploys it to GitHub Pages when `site/` changes on `master`, **after every release**, and when a release is published or edited on github.com. One-time setup: *Settings → Pages → Build and deployment → Source: GitHub Actions*.
+
+| Make | Description |
+|---|---|
+| `make site` | Build `_site/` locally |
+| `make site-serve` | Build and preview at `localhost:8081` |
+| `make site-deploy` | Rebuild and publish now (uses the GitHub CLI, `gh`) |
+
+### 🔔 Update notices
+
+The app checks GitHub Releases ([`core/updates.js`](resources/js/core/updates.js), [`ui/updater.js`](resources/js/ui/updater.js)) a few seconds after launch, every 6 hours while open, and when the window regains focus after an hour. Requests use ETags, so repeated checks don't count against GitHub's rate limit; if the API is unavailable it reads the website's `latest.json`. A newer version shows a badge in the status bar and a one-time notice; the dialog shows the release notes and the right download for the user's OS and CPU. Pre-releases and drafts are ignored, and users can skip a version or turn automatic checks off.
 
 ---
 
@@ -233,17 +250,19 @@ The landing page lives in [`site/`](site/) and is deployed to GitHub Pages by [`
 ```text
 motivo/
 ├── AGENTS.md                   # conventions for AI agents and contributors
+├── CHANGELOG.md                # release notes; "Unreleased" becomes the next version
 ├── .github/workflows/          # CI tests, release builds, GitHub Pages deploy
 ├── packaging/macos/            # Info.plist template + entitlements for the .app
 ├── site/                       # landing page (GitHub Pages) + screenshots
 ├── Makefile, package.json      # dev tasks
 ├── neutralino.config.json      # window + native API allow-list
-├── scripts/                    # golden-seed tooling, macOS packaging (macos.sh)
+├── scripts/                    # release.mjs, build-site.mjs, macos.sh, golden-seed tooling
 ├── tests/                      # node:test suites: smoke tests + golden seeds
 └── resources/
     ├── index.html · css/app.css · fonts/ · icons/
     └── js/
         ├── main.js             # UI controller (inspector, mixer, library, export)
+        ├── version.js          # app version (kept in sync by `make release`)
         ├── ui/                 # arrangement view, visualizer, icons, undo history, Neutralino wrapper
         └── core/
             ├── rng.js          # seeded, forkable PRNG
@@ -254,6 +273,7 @@ motivo/
             ├── gen.worker.js   # runs the composer off the main thread (genclient.js wraps it)
             ├── params.js       # preset / saved-data normalisation shared with tests
             ├── wizard.js       # new-track wizard: answers → parameters (UI in ui/wizard.js)
+            ├── updates.js      # release checks: version compare, asset choice, safe notes (UI in ui/updater.js)
             ├── ticker.js       # worker-based scheduler clock
             ├── instruments.js  # instruments, kits, beds, details
             ├── synth.js        # Web Audio synthesis + FX graph
