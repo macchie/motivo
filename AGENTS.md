@@ -11,7 +11,9 @@ Guidance for AI coding agents (and humans) working on **Motivo**, a Neutralinojs
 | Run in a browser (no native APIs) | `make web` → http://localhost:8080 |
 | Tests (smoke, golden seeds, wizard) | `make test` / `npm test` |
 | Re-record golden seeds | `npm run golden` (only after bumping `GENERATOR_VERSION`) |
-| Release build | `make build` |
+| Release build (all platforms) | `make build` / `make build-embed` |
+| macOS app / sign / dmg (on a Mac) | `make mac-release` (see `scripts/macos.sh`) |
+| Publish a release | push a `vX.Y.Z` tag → `.github/workflows/release.yml` |
 
 Always run `npm test` before finishing a change. There is no linter or bundler: check syntax with `node --check <file>`.
 
@@ -32,7 +34,10 @@ resources/
     styles.js, presets.js, instruments.js, theory.js, rng.js, export.js
   js/ui/                          # arrangement view, visualizer, icons, history (undo), wizard dialog, native.js
 tests/                            # node:test suites (*.test.mjs) + golden.json
-scripts/                          # golden-seed tooling
+scripts/                          # golden-seed tooling, macos.sh (app bundle, signing, notarization, dmg)
+packaging/macos/                  # Info.plist template + entitlements
+site/                             # landing page for GitHub Pages; site/assets/screenshots/ also used by README
+.github/workflows/                # ci.yml (tests), release.yml (builds + GitHub release), pages.yml (site)
 ```
 
 ## Ground rules
@@ -78,6 +83,8 @@ Update the docs in the same change whenever behaviour visible to users or contri
 - **`INSTRUCTIONS.md`** (user guide): new or changed controls, parameters, modes, export options, shortcuts, library behaviour, wizard steps, troubleshooting. Keep the table of contents numbering and the **Keyboard shortcuts** table up to date.
 - **`README.md`**: feature list, architecture notes, project structure tree (when files are added, moved or removed), commands, troubleshooting, roadmap (tick items that ship).
 - **`AGENTS.md`** (this file): commands, layout or ground rules that change.
+- **`site/index.html`** (landing page): feature claims, counts (genres, themes, instruments), download file names and first-launch steps must match the app and `release.yml`.
+- **Screenshots** in `site/assets/screenshots/` (used by the site and README): retake them when the UI changes visibly. Capture at 1440×900, 2× scale, in the browser build (`make web`), and save as WebP.
 
 Purely internal refactors with no visible effect don't need doc changes. When in doubt, update the docs.
 
@@ -86,6 +93,12 @@ Purely internal refactors with no visible effect don't need doc changes. When in
 - Unit tests: `node --test tests/*.test.mjs`. Add tests for new `core/` logic.
 - UI changes: run `make web` (or the desktop app) and exercise the flow; check the console stays clean.
 - Audio changes: listen, and for export changes verify the rendered file (length, loop points, levels).
+
+## Releases and packaging
+
+- Release asset names are a contract with the landing page and README links: `Motivo-macOS.dmg`, `Motivo-Windows-x64.zip`, `Motivo-Linux-{x64,arm64,armhf}.tar.gz`. Change them everywhere at once or not at all.
+- Release builds embed resources (`--embed-resources`); the macOS `.app` wraps the universal binary.
+- Never commit signing certificates, passwords or notary credentials; CI reads them from repository secrets.
 
 ## Git
 

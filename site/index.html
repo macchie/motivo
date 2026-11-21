@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Motivo — procedural game music, composed on your machine</title>
+  <meta name="description" content="Motivo is a free, open-source desktop app that composes and synthesises game music: seamless loops, evolving tracks, stingers, stems and MIDI. No samples, no AI model, no licensing.">
+  <meta property="og:title" content="Motivo — procedural game music">
+  <meta property="og:description" content="Free desktop app that composes seamless loops, evolving tracks, stingers, stems and MIDI for your game.">
+  <meta property="og:image" content="https://macchie.github.io/motivo/assets/og.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0a0c11">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="preload" href="assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face { font-family: 'Inter'; src: url('assets/fonts/inter.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+    @font-face { font-family: 'JB Mono'; src: url('assets/fonts/jbmono.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+    :root {
+      --bg: #0a0c11; --panel: #11141b; --panel-2: #161a23; --raised: #1c212c; --well: #0c0f15; --border: #232937;
+      --text: #e8ebf1; --text-2: #a3abba; --text-3: #687184; --accent: #f2b544; --accent-2: #4fd1c5; --violet: #8b7cf6;
+      --mono: 'JB Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --w: 1160px;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font: 16px/1.6 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; height: auto; }
+    code, kbd { font-family: var(--mono); font-size: .88em; }
+    kbd { background: var(--raised); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+    .wrap { width: min(var(--w), 100% - 40px); margin-inline: auto; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+    /* nav */
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(10,12,17,.72); border-bottom: 1px solid rgba(35,41,55,.6); }
+    nav .wrap { display: flex; align-items: center; gap: 28px; height: 62px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+    .brand img { width: 30px; height: 30px; border-radius: 8px; }
+    nav .links { display: flex; gap: 22px; margin-left: auto; font-size: 14px; color: var(--text-2); }
+    nav .links a:hover { color: var(--text); }
+    @media (max-width: 760px) { nav .links a:not(.gh) { display: none; } }
+
+    /* buttons */
+    .btn { display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 12px; font-weight: 600; font-size: 15px; border: 1px solid var(--border); background: var(--panel-2); transition: transform .12s, background .12s, border-color .12s; cursor: pointer; color: var(--text); font-family: inherit; }
+    .btn:hover { background: var(--raised); border-color: #323a4c; }
+    .btn.primary { background: var(--accent); color: #1c1305; border-color: transparent; box-shadow: 0 8px 30px rgba(242,181,68,.25); }
+    .btn.primary:hover { background: #f7c35e; transform: translateY(-1px); }
+    .btn svg { width: 18px; height: 18px; }
+    .btn small { font-weight: 500; opacity: .7; }
+
+    /* hero */
+    header.hero { position: relative; padding: 84px 0 40px; text-align: center; overflow: hidden; }
+    header.hero::before { content: ''; position: absolute; inset: -20% -10% auto; height: 640px; background: radial-gradient(closest-side, rgba(139,124,246,.22), transparent 70%), radial-gradient(closest-side at 30% 60%, rgba(242,181,68,.14), transparent 70%), radial-gradient(closest-side at 72% 55%, rgba(79,209,197,.12), transparent 70%); pointer-events: none; }
+    .kicker { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 5px 14px; position: relative; }
+    .kicker b { color: var(--accent-2); font-weight: 600; }
+    h1 { font-size: clamp(40px, 6.2vw, 74px); line-height: 1.04; letter-spacing: -.035em; font-weight: 800; margin: 22px auto 18px; max-width: 15ch; position: relative; }
+    h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), #f39a6b 45%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { font-size: clamp(17px, 2vw, 20px); color: var(--text-2); max-width: 640px; margin: 0 auto 32px; position: relative; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; }
+    .meta { margin-top: 14px; font-size: 13px; color: var(--text-3); position: relative; }
+    .meta a { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
+    .shot { position: relative; margin: 56px auto 0; border-radius: 16px; padding: 6px; background: linear-gradient(180deg, #2a3142, #141821); box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04); }
+    .shot img { border-radius: 11px; }
+    .shot .dots { position: absolute; top: 18px; left: 22px; display: flex; gap: 7px; }
+
+    /* stats */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin: 70px auto 0; }
+    .stats div { background: var(--panel); padding: 22px 18px; text-align: center; }
+    .stats b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+    .stats span { font-size: 13px; color: var(--text-3); }
+    @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    section { padding: 100px 0 0; }
+    .eyebrow { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+    h2 { font-size: clamp(30px, 3.8vw, 44px); line-height: 1.1; letter-spacing: -.025em; font-weight: 800; margin: 10px 0 14px; }
+    .sub { color: var(--text-2); font-size: 17px; max-width: 620px; }
+    .center { text-align: center; } .center .sub { margin-inline: auto; }
+
+    /* features */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 40px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+    .card .ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--raised); color: var(--accent); margin-bottom: 14px; }
+    .card .ic svg { width: 20px; height: 20px; }
+    .card h3 { font-size: 16.5px; margin-bottom: 6px; }
+    .card p { font-size: 14.5px; color: var(--text-2); }
+
+    /* split sections */
+    .split { display: grid; grid-template-columns: 1fr 1.25fr; gap: 56px; align-items: center; }
+    .split.rev { grid-template-columns: 1.25fr 1fr; }
+    .split.rev > :first-child { order: 2; }
+    @media (max-width: 900px) { .split, .split.rev { grid-template-columns: 1fr; } .split.rev > :first-child { order: 0; } }
+    .frame { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 30px 80px rgba(0,0,0,.5); background: var(--panel); }
+    ul.ticks { list-style: none; padding: 0; margin-top: 22px; display: grid; gap: 12px; }
+    ul.ticks li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; color: var(--text-2); font-size: 15px; }
+    ul.ticks li::before { content: ''; width: 18px; height: 18px; margin-top: 3px; border-radius: 50%; background: rgba(79,209,197,.15) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234fd1c5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 11px no-repeat; }
+    ul.ticks b { color: var(--text); font-weight: 600; }
+    .thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .steps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .steps span { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); color: var(--text-2); }
+    .steps span b { color: var(--accent); margin-right: 4px; }
+    .engines { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .engines span { font-family: var(--mono); font-size: 12.5px; padding: 5px 10px; border-radius: 8px; background: var(--well); border: 1px solid var(--border); color: var(--text-2); }
+
+    /* how it works */
+    pre.code { background: var(--well); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; color: var(--text-2); overflow-x: auto; }
+    pre.code .k { color: var(--accent-2); } pre.code .s { color: var(--accent); } pre.code .n { color: #f39a6b; } pre.code .c { color: var(--text-3); }
+
+    /* downloads */
+    .dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 40px; }
+    @media (max-width: 900px) { .dl { grid-template-columns: 1fr; } }
+    .dl .card { display: flex; flex-direction: column; gap: 12px; }
+    .dl .card.mine { border-color: rgba(242,181,68,.55); box-shadow: 0 0 0 1px rgba(242,181,68,.25), 0 20px 60px rgba(242,181,68,.08); }
+    .dl h3 { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+    .dl h3 svg { width: 22px; height: 22px; color: var(--text-2); }
+    .dl .files { display: grid; gap: 8px; }
+    .dl .files a { display: flex; flex-direction: column; gap: 2px; padding: 11px 14px; border-radius: 10px; background: var(--well); border: 1px solid var(--border); font-size: 14px; font-weight: 600; }
+    .dl .files a:hover { border-color: rgba(242,181,68,.6); }
+    .dl .files a small { font-family: var(--mono); font-weight: 500; font-size: 11.5px; color: var(--text-3); }
+    details { background: var(--well); border: 1px solid var(--border); border-radius: 10px; padding: 0 14px; font-size: 14px; color: var(--text-2); }
+    details[open] { padding-bottom: 12px; }
+    summary { cursor: pointer; padding: 11px 0; color: var(--text); font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--text-3); font-weight: 400; }
+    details[open] summary::after { content: '−'; }
+    details ol { padding-left: 18px; display: grid; gap: 6px; }
+    details p + p, details ol + p, details p + ol { margin-top: 8px; }
+    .cmd { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 7px 8px 7px 12px; margin-top: 6px; }
+    .cmd code { flex: 1; overflow-x: auto; white-space: nowrap; color: var(--text); font-size: 12.5px; }
+    .cmd button { border: 0; background: var(--raised); color: var(--text-2); border-radius: 6px; font: 600 12px 'Inter', sans-serif; padding: 5px 9px; cursor: pointer; }
+    .cmd button:hover { color: var(--text); }
+    .note { margin-top: 18px; font-size: 13.5px; color: var(--text-3); text-align: center; }
+    .note a { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
+
+    footer { margin-top: 110px; border-top: 1px solid var(--border); padding: 34px 0 50px; color: var(--text-3); font-size: 14px; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; }
+    footer .links { display: flex; gap: 22px; margin-left: auto; }
+    footer a:hover { color: var(--text); }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+  </style>
+</head>
+<body>
+  <nav aria-label="Main">
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="assets/icon.png" alt="" width="30" height="30">Motivo</a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#wizard">Wizard</a>
+        <a href="#export">Export</a>
+        <a href="#download">Download</a>
+        <a class="gh" href="https://github.com/macchie/motivo">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="wrap">
+      <span class="kicker"><b>Free &amp; open source</b> · macOS · Windows · Linux</span>
+      <h1>Game music, <em>composed on your machine.</em></h1>
+      <p class="lede">Motivo writes and plays original soundtracks for your game: seamless loops, endlessly evolving tracks, stingers, stems and MIDI. No samples, no AI model, no licensing — just music theory and a seed.</p>
+      <div class="cta">
+        <a class="btn primary" id="heroDl" href="#download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+          <span id="heroDlLabel">Download Motivo</span>
+        </a>
+        <a class="btn" href="https://github.com/macchie/motivo">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <p class="meta"><span id="heroVersion">Latest release</span> · <a href="#download">All platforms</a> · MIT licensed</p>
+      <div class="shot">
+        <img src="assets/screenshots/main.webp" width="2880" height="1800" alt="Motivo's main window: a theme list on the left, a live spectrum with the current chord, an arrangement timeline with sections and a mini piano roll, a seven-layer mixer, and the parameters panel on the right.">
+      </div>
+      <div class="stats" aria-label="Motivo in numbers">
+        <div><b>11</b><span>genres</span></div>
+        <div><b>21</b><span>ready-made themes</span></div>
+        <div><b>36</b><span>synthesised instruments</span></div>
+        <div><b>0</b><span>samples to license</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="center">
+        <div class="eyebrow">Features</div>
+        <h2>Everything a game soundtrack needs</h2>
+        <p class="sub">Pick a theme, press play, tweak until it fits. Every change lands on the next bar, so you hear edits, not interruptions.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></div><h3>Seamless &amp; evolving loops</h3><p>Loops wrap their reverb tails and carry embedded loop points. Evolving mode keeps varying every cycle for hours of non-repetitive play.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></div><h3>Reproducible by seed</h3><p>A track is a seed plus its parameters. Save a few bytes of JSON, regenerate the exact same music any time — or roll a new seed for a fresh variation.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></div><h3>Stems for adaptive music</h3><p>Export one WAV per layer that sums back exactly to the mix. Fade drums in for combat, drop the lead in menus — all from one track.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></div><h3>Beginner wizard</h3><p>Five questions — purpose, setting, feel, length — then pick your favourite of three variations. Everything stays editable afterwards.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg></div><h3>Real controls, explained</h3><p>Energy, tension, brightness, form, groove, melody, ambience and effects — every parameter is plain language, with undo for everything.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>Yours to ship</h3><p>No samples, no cloud, no AI model. Everything is synthesised locally, so whatever you export is yours to use in any project.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="wizard">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">New track wizard</div>
+        <h2>From zero to a fitting track in a minute</h2>
+        <p class="sub">Not sure what "harmonic rhythm" means? You don't need to. Tell Motivo what the music is for and how it should feel; it picks sensible settings and gives you three takes to choose from.</p>
+        <div class="steps"><span><b>1</b>Purpose</span><span><b>2</b>Setting</span><span><b>3</b>Feel</span><span><b>4</b>Length</span><span><b>5</b>Pick one</span></div>
+        <ul class="ticks">
+          <li><span><b>Mood pad</b> — drag between calm and intense, dark and bright.</span></li>
+          <li><span><b>Audition</b> three variations before you commit.</span></li>
+          <li><span><b>Fine-tune later</b> in the full Parameters panel; nothing is locked.</span></li>
+        </ul>
+      </div>
+      <div>
+        <div class="frame"><img src="assets/screenshots/wizard-feel.webp" width="1584" height="1260" alt="The wizard's Feel step: a mood pad with calm to intense across and dark to bright up and down, and tempo options." loading="lazy"></div>
+        <div class="thumbs">
+          <div class="frame"><img src="assets/screenshots/wizard-setting.webp" width="1584" height="1260" alt="The wizard's Setting step: suggested themes and genres." loading="lazy"></div>
+          <div class="frame"><img src="assets/screenshots/wizard-pick.webp" width="1584" height="1260" alt="The wizard's last step: three variations with play buttons." loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="editor">
+    <div class="wrap split rev">
+      <div>
+        <div class="eyebrow">See what you hear</div>
+        <h2>An arrangement you can read</h2>
+        <p class="sub">Sections, chord symbols and a mini piano roll per layer, with the current and next chord over a live spectrum. Mute, solo and swap any of 36 instruments while it plays.</p>
+        <ul class="ticks">
+          <li><span><b>7 layers</b> — pad, chords, bass, lead, arp, drums and ambience.</span></li>
+          <li><span><b>Ambience beds &amp; details</b> — rain, wind, ocean, fire, birds, chimes and more.</span></li>
+          <li><span><b>Effects</b> — convolution reverb, ping-pong delay, tape, sidechain pump, stereo width.</span></li>
+        </ul>
+      </div>
+      <div class="frame"><img src="assets/screenshots/arrangement.webp" width="1672" height="1628" alt="Close-up of the visualizer, arrangement timeline and mixer." loading="lazy"></div>
+    </div>
+  </section>
+
+  <section id="export">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">Export</div>
+        <h2>Drop it straight into your engine</h2>
+        <p class="sub">WAV with embedded loop points, per-layer stems, multi-track MIDI for your DAW, or a tiny project file that regenerates everything.</p>
+        <ul class="ticks">
+          <li><span><b>16/24-bit, 44.1/48 kHz</b> WAV, normalized, sample-accurate loops.</span></li>
+          <li><span><b>Stems + matching mix</b> that add up exactly when layered.</span></li>
+          <li><span><b>MIDI</b> with tempo, meter, section markers and General MIDI programs.</span></li>
+        </ul>
+        <div class="engines"><span>Unity</span><span>Godot</span><span>Unreal</span><span>GameMaker</span><span>FMOD</span><span>Wwise</span></div>
+      </div>
+      <div class="frame"><img src="assets/screenshots/export.webp" width="1383" height="1296" alt="The export dialog with WAV, Stems, MIDI and Project formats, sample rate, bit depth and loop-point options." loading="lazy"></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap split rev">
+      <div>
+        <div class="eyebrow">How it works</div>
+        <h2>Music theory, not magic</h2>
+        <p class="sub">Motivo is a rule-based composer. It picks a key and scale from the mood, builds a form and chord progressions from genre templates, writes motifs and grooves, then synthesises every note with the Web Audio API.</p>
+        <p class="sub" style="margin-top:12px">Every decision comes from a seeded random generator split per layer, so changing the drums never reshuffles the melody.</p>
+      </div>
+      <pre class="code" aria-label="Example project file"><span class="c">// neon-drive.motivo.json — the whole track</span>
+{
+  <span class="k">"seed"</span>: <span class="s">"neon-harbor-77"</span>,
+  <span class="k">"style"</span>: <span class="s">"synthwave"</span>,
+  <span class="k">"mode"</span>: <span class="s">"loop"</span>,
+  <span class="k">"length"</span>: <span class="n">120</span>,
+  <span class="k">"energy"</span>: <span class="n">70</span>,
+  <span class="k">"tension"</span>: <span class="n">40</span>,
+  <span class="k">"brightness"</span>: <span class="n">55</span>,
+  <span class="c">// …and the rest of the parameters</span>
+}</pre>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="center">
+        <div class="eyebrow">Download</div>
+        <h2>Get Motivo</h2>
+        <p class="sub"><span id="dlVersion">The latest release</span> for macOS, Windows and Linux. A single small app, no installer required.</p>
+      </div>
+      <div class="dl">
+        <div class="card" data-os="mac">
+          <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.7c1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-3.8zM14 5.4c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></svg>macOS</h3>
+          <div class="files"><a data-asset="Motivo-macOS.dmg" href="https://github.com/macchie/motivo/releases/latest/download/Motivo-macOS.dmg">Motivo-macOS.dmg <small>Universal · Apple silicon &amp; Intel</small></a></div>
+          <details>
+            <summary>“Motivo can’t be opened”?</summary>
+            <p>Release builds may not be signed with an Apple Developer ID yet, so Gatekeeper blocks the first launch. To open it anyway:</p>
+            <ol>
+              <li>Open the <code>.dmg</code> and drag <b>Motivo</b> to <b>Applications</b>.</li>
+              <li>Double-click Motivo once and dismiss the warning.</li>
+              <li>Go to <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>, then confirm.</li>
+            </ol>
+            <p>Or remove the download quarantine flag in Terminal:</p>
+            <div class="cmd"><code>xattr -dr com.apple.quarantine /Applications/Motivo.app</code><button type="button" data-copy>Copy</button></div>
+          </details>
+        </div>
+        <div class="card" data-os="win">
+          <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.2H3V5.5zm0 13 7.5 1.1v-7.1H3v6zm8.4 1.3L21 21v-8.5h-9.6v7.3zm0-15.5v7.3H21V3l-9.6 1.3z"/></svg>Windows</h3>
+          <div class="files"><a data-asset="Motivo-Windows-x64.zip" href="https://github.com/macchie/motivo/releases/latest/download/Motivo-Windows-x64.zip">Motivo-Windows-x64.zip <small>Windows 10 / 11 · x64</small></a></div>
+          <details>
+            <summary>First launch</summary>
+            <ol>
+              <li>Unzip and run <code>Motivo.exe</code>.</li>
+              <li>If SmartScreen says “Windows protected your PC”, click <b>More info → Run anyway</b>.</li>
+            </ol>
+            <p>Motivo uses the Edge WebView2 runtime, already installed on Windows 10 and 11.</p>
+          </details>
+        </div>
+        <div class="card" data-os="linux">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 10 3 2-3 2"/><path d="M13 15h3"/></svg>Linux</h3>
+          <div class="files">
+            <a data-asset="Motivo-Linux-x64.tar.gz" href="https://github.com/macchie/motivo/releases/latest/download/Motivo-Linux-x64.tar.gz">Motivo-Linux-x64.tar.gz <small>x86-64</small></a>
+            <a data-asset="Motivo-Linux-arm64.tar.gz" href="https://github.com/macchie/motivo/releases/latest/download/Motivo-Linux-arm64.tar.gz">Motivo-Linux-arm64.tar.gz <small>ARM64</small></a>
+          </div>
+          <details>
+            <summary>First launch</summary>
+            <p>Extract and run <code>./motivo</code>. Motivo needs WebKitGTK and GStreamer for audio:</p>
+            <div class="cmd"><code>sudo apt install libwebkit2gtk-4.1-0 gstreamer1.0-plugins-good</code><button type="button" data-copy>Copy</button></div>
+          </details>
+        </div>
+      </div>
+      <p class="note">Checksums, release notes and older versions are on the <a href="https://github.com/macchie/motivo/releases">releases page</a>. Prefer building it yourself? See the <a href="https://github.com/macchie/motivo#-quick-start">quick start</a>.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="assets/icon.png" alt="" width="24" height="24" style="width:24px;height:24px">Motivo</a>
+      <span>Free and open source under the MIT license.</span>
+      <div class="links">
+        <a href="https://github.com/macchie/motivo/blob/master/INSTRUCTIONS.md">User guide</a>
+        <a href="https://github.com/macchie/motivo/releases">Releases</a>
+        <a href="https://github.com/macchie/motivo/issues">Issues</a>
+        <a href="https://github.com/macchie/motivo">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Highlight the visitor's platform and point the hero button at the right file.
+    (function () {
+      const ua = navigator.userAgent, plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+      // Phones and tablets get the generic button: there is nothing to install there.
+      const mobile = /iPhone|iPad|iPod|Android/.test(ua) || (navigator.maxTouchPoints > 1 && /Mac/.test(plat));
+      const os = mobile ? null : /Mac/.test(plat + ua) ? 'mac' : /Win/.test(plat + ua) ? 'win' : /Linux|X11/.test(plat + ua) && !/Android/.test(ua) ? 'linux' : null;
+      const names = { mac: 'macOS', win: 'Windows', linux: 'Linux' };
+      if (os) {
+        const card = document.querySelector(`[data-os="${os}"]`);
+        card.classList.add('mine');
+        const a = card.querySelector('.files a');
+        const hero = document.getElementById('heroDl');
+        hero.href = a.href;
+        document.getElementById('heroDlLabel').innerHTML = `Download for ${names[os]}`;
+      }
+      // Show the latest version and file sizes when a release exists.
+      fetch('https://api.github.com/repos/macchie/motivo/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((rel) => {
+          const v = rel.tag_name;
+          document.getElementById('heroVersion').textContent = `Version ${v.replace(/^v/, '')}`;
+          document.getElementById('dlVersion').textContent = `Motivo ${v}`;
+          for (const asset of rel.assets || []) {
+            const link = document.querySelector(`[data-asset="${asset.name}"] small`);
+            if (link) link.textContent += ` · ${(asset.size / 1e6).toFixed(1)} MB`;
+          }
+        })
+        .catch(() => {
+          document.getElementById('heroVersion').textContent = 'First release coming soon';
+          document.getElementById('dlVersion').parentElement.textContent = 'The first release is on its way. Until then you can build Motivo from source in a couple of minutes.';
+          document.querySelectorAll('.files a').forEach((a) => { a.href = 'https://github.com/macchie/motivo/releases'; });
+          document.getElementById('heroDl').href = '#download';
+        });
+      document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => {
+        navigator.clipboard.writeText(b.previousElementSibling.textContent).then(() => {
+          b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1500);
+        });
+      }));
+    })();
+  </script>
+</body>
+</html>

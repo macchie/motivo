@@ -1,6 +1,42 @@
+# Dependencies and downloaded Neutralino binaries (`make install`)
 node_modules/
 bin/
+
+# Build output (`make build`, `make mac-*`)
 dist/
 .tmp/
-neutralinojs.log
+*.iconset/
+
+# Neutralino runtime data and logs
 .storage/
+neutralinojs.log
+*.log
+npm-debug.log*
+
+# Signing material: never commit certificates, keys or credentials
+*.p12
+*.pfx
+*.cer
+*.key
+*.pem
+*.keychain-db
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
+
+# Exports made while testing the app
+*.wav
+*.mid
+*.motivo.json
+motivo_library.json
+
+# OS and editor files
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*~

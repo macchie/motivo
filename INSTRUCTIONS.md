@@ -6,23 +6,55 @@ This guide explains every part of Motivo: what each control does, how the compos
 
 ## 📑 Contents
 
-1. [⚡ Your first track in 60 seconds](#-your-first-track-in-60-seconds)
-2. [🧭 New track wizard](#-new-track-wizard)
-3. [🧠 Core concepts](#-core-concepts)
-4. [🖥️ Interface tour](#%EF%B8%8F-interface-tour)
-5. [🎨 Themes (presets)](#-themes-presets)
-6. [🎭 Genres](#-genres)
-7. [🎛️ Parameters reference](#%EF%B8%8F-parameters-reference)
-8. [🔁 Playback modes in depth](#-playback-modes-in-depth)
-9. [🎚️ Mixer and instruments](#%EF%B8%8F-mixer-and-instruments)
-10. [🌧️ Ambience](#%EF%B8%8F-ambience)
-11. [📊 Visualizer and arrangement](#-visualizer-and-arrangement)
-12. [📚 Library, seeds and projects](#-library-seeds-and-projects)
-13. [📦 Exporting](#-exporting)
-14. [🎮 Using the music in your game](#-using-the-music-in-your-game)
-15. [⌨️ Keyboard shortcuts](#%EF%B8%8F-keyboard-shortcuts)
-16. [💡 Recipes and tips](#-recipes-and-tips)
-17. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
+1. [💻 Installing and first launch](#-installing-and-first-launch)
+2. [⚡ Your first track in 60 seconds](#-your-first-track-in-60-seconds)
+3. [🧭 New track wizard](#-new-track-wizard)
+4. [🧠 Core concepts](#-core-concepts)
+5. [🖥️ Interface tour](#%EF%B8%8F-interface-tour)
+6. [🎨 Themes (presets)](#-themes-presets)
+7. [🎭 Genres](#-genres)
+8. [🎛️ Parameters reference](#%EF%B8%8F-parameters-reference)
+9. [🔁 Playback modes in depth](#-playback-modes-in-depth)
+10. [🎚️ Mixer and instruments](#%EF%B8%8F-mixer-and-instruments)
+11. [🌧️ Ambience](#%EF%B8%8F-ambience)
+12. [📊 Visualizer and arrangement](#-visualizer-and-arrangement)
+13. [📚 Library, seeds and projects](#-library-seeds-and-projects)
+14. [📦 Exporting](#-exporting)
+15. [🎮 Using the music in your game](#-using-the-music-in-your-game)
+16. [⌨️ Keyboard shortcuts](#%EF%B8%8F-keyboard-shortcuts)
+17. [💡 Recipes and tips](#-recipes-and-tips)
+18. [🛠️ Troubleshooting and FAQ](#%EF%B8%8F-troubleshooting-and-faq)
+---
+
+## 💻 Installing and first launch
+
+Download the file for your system from the [website](https://macchie.github.io/motivo/#download) or the [releases page](https://github.com/macchie/motivo/releases/latest). Motivo is a single small app: there is no installer.
+
+### 🍎 macOS
+1. Open `Motivo-macOS.dmg` and drag **Motivo** into **Applications**.
+2. Open Motivo from Applications.
+
+If the build isn't signed with an Apple Developer ID, macOS blocks the first launch with *“Motivo can't be opened because Apple cannot check it for malicious software”* (or *“Apple could not verify…”*). This is expected for unsigned open-source apps. To open it anyway, choose **one** of these:
+
+- **System Settings:** click *Done* on the warning, open **System Settings → Privacy & Security**, scroll to the message about Motivo and click **Open Anyway**, then confirm with your password. You only do this once.
+- **Terminal:** remove the download quarantine flag, then open the app normally:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Motivo.app
+  ```
+  If you build from source, `make mac-unquarantine` does the same.
+
+On macOS 14 and earlier you can also right-click (or Control-click) Motivo and choose **Open**. macOS 15 removed that shortcut, so use one of the options above.
+
+### 🪟 Windows
+1. Unzip `Motivo-Windows-x64.zip` anywhere and run `Motivo.exe`.
+2. If SmartScreen shows *“Windows protected your PC”*, click **More info → Run anyway**.
+
+Motivo uses the Microsoft Edge WebView2 runtime, which ships with Windows 10 and 11.
+
+### 🐧 Linux
+1. Extract the archive for your architecture (`x64`, `arm64` or `armhf`) and run `./motivo`.
+2. Motivo needs WebKitGTK and GStreamer: `sudo apt install libwebkit2gtk-4.1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good` (Debian/Ubuntu; use your distribution's equivalents elsewhere).
+
 ---
 
 ## ⚡ Your first track in 60 seconds
@@ -464,6 +496,9 @@ To make a set of tracks that feel related (exploration and combat versions, for 
 
 ## 🛠️ Troubleshooting and FAQ
 
+**🍎 macOS says Motivo “can't be opened” or that Apple “could not verify” it.**
+The build isn't notarized by Apple. See [Installing and first launch](#-installing-and-first-launch): use *Open Anyway* in *Privacy & Security*, or `xattr -dr com.apple.quarantine /Applications/Motivo.app`.
+
 **🔇 I hear nothing.**
 Press play once: browsers and webviews only start audio after a user action. On Linux, install GStreamer plugins: `sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good`. Also check that no layer is soloed by mistake.
 
@@ -477,7 +512,7 @@ Rendering time is proportional to length × number of notes. Evolving exports re
 Make sure the engine isn't adding a fade or streaming with a decoder gap. For MP3 conversions, prefer OGG instead: MP3 adds padding at the start.
 
 **❓ Will the same seed sound identical in a future version?**
-Within the same version, yes. Generator improvements in later versions may change the result, so keep your exported audio for shipped builds.
+Yes, as long as the composer itself doesn't change. Every saved track records which composer version made it, and Motivo warns you when you load a track made with a different one. Keep your exported audio for shipped builds anyway.
 
 **⚖️ Can I use the music commercially?**
 Yes. The music is generated on your machine from synthesis, with no third-party samples. It's yours, no attribution required.

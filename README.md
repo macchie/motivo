@@ -15,8 +15,14 @@ Pick a theme, turn a few mood knobs, and get a seamless loop for your dungeon, s
 [![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-a3b1c6.svg?style=flat-square)](#-building-for-release)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-5aa9e6.svg?style=flat-square)](https://nodejs.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-f06d8c.svg?style=flat-square)](#-contributing)
+[![CI](https://github.com/macchie/motivo/actions/workflows/ci.yml/badge.svg)](https://github.com/macchie/motivo/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/macchie/motivo?style=flat-square&color=f2b544)](https://github.com/macchie/motivo/releases/latest)
 
-[✨ Features](#-features) · [🚀 Quick start](#-quick-start) · [📖 User guide](INSTRUCTIONS.md) · [🏗️ Architecture](#%EF%B8%8F-architecture) · [🤝 Contributing](#-contributing)
+**[🌐 Website](https://macchie.github.io/motivo/) · [⬇️ Download](#%EF%B8%8F-download)** · [✨ Features](#-features) · [🚀 Quick start](#-quick-start) · [📖 User guide](INSTRUCTIONS.md) · [🏗️ Architecture](#%EF%B8%8F-architecture) · [🤝 Contributing](#-contributing)
+
+<br>
+
+<img src="site/assets/screenshots/main.webp" alt="Motivo's main window: themes on the left, a live spectrum and arrangement timeline in the middle, a seven-layer mixer, and the parameters panel on the right." width="100%">
 
 </div>
 
@@ -34,6 +40,25 @@ Every track is the result of **seed + parameters**. That means:
 - 🆓 **Yours to use.** No samples means no licensing. Everything you export is generated on your machine.
 
 > **Who is it for?** Indie developers who need placeholder or final music, game jam teams, prototypers, and anyone curious about procedural audio.
+
+---
+
+## ⬇️ Download
+
+Get the latest build for your platform from the **[releases page](https://github.com/macchie/motivo/releases/latest)** or the **[website](https://macchie.github.io/motivo/#download)**:
+
+| Platform | File |
+|---|---|
+| 🍎 macOS (Apple silicon & Intel) | [`Motivo-macOS.dmg`](https://github.com/macchie/motivo/releases/latest/download/Motivo-macOS.dmg) |
+| 🪟 Windows 10 / 11 (x64) | [`Motivo-Windows-x64.zip`](https://github.com/macchie/motivo/releases/latest/download/Motivo-Windows-x64.zip) |
+| 🐧 Linux x64 / ARM64 / ARMv7 | [`Motivo-Linux-x64.tar.gz`](https://github.com/macchie/motivo/releases/latest/download/Motivo-Linux-x64.tar.gz) · [`arm64`](https://github.com/macchie/motivo/releases/latest/download/Motivo-Linux-arm64.tar.gz) · [`armhf`](https://github.com/macchie/motivo/releases/latest/download/Motivo-Linux-armhf.tar.gz) |
+
+> [!NOTE]
+> **macOS says "Motivo can't be opened"?** Builds that aren't signed with an Apple Developer ID are blocked on first launch. Open the app once, then go to **System Settings → Privacy & Security → Open Anyway**, or run:
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/Motivo.app
+> ```
+> On Windows, click **More info → Run anyway** if SmartScreen appears. Details in the [user guide](INSTRUCTIONS.md#-installing-and-first-launch).
 
 ---
 
@@ -71,6 +96,18 @@ Every track is the result of **seed + parameters**. That means:
 - 💾 **Project**: a few hundred bytes of JSON (seed and parameters) that regenerate the exact track.
 
 ### 🖥️ Interface
+
+<table>
+<tr>
+<td width="50%"><img src="site/assets/screenshots/wizard-feel.webp" alt="New track wizard: the mood pad and tempo step"></td>
+<td width="50%"><img src="site/assets/screenshots/export.webp" alt="Export dialog with WAV, stems, MIDI and project formats"></td>
+</tr>
+<tr>
+<td align="center"><sub>New track wizard</sub></td>
+<td align="center"><sub>Export dialog</sub></td>
+</tr>
+</table>
+
 - 🧭 **New track wizard** (`N`): five quick steps for beginners — what the music is for, a theme or genre, a mood pad (calm↔intense, dark↔bright) and tempo, a length — then pick your favourite of three variations. Everything stays editable in the Parameters panel. Opens automatically on first launch.
 - Live spectrum showing the current and next chord.
 - Arrangement timeline with sections, chord symbols and a mini piano roll per layer. Click or drag to seek (audio jumps when you release).
@@ -88,7 +125,7 @@ Every track is the result of **seed + parameters**. That means:
 **Requirements:** [Node.js](https://nodejs.org) ≥ 18 and GNU Make. On Linux you also need WebKitGTK with GStreamer; see [Troubleshooting](#-troubleshooting).
 
 ```bash
-git clone <your-fork-url> motivo
+git clone https://github.com/macchie/motivo.git
 cd motivo
 make install   # npm deps + Neutralino binaries
 make dev       # launch the desktop app with the inspector enabled
@@ -105,9 +142,11 @@ Then click a theme, press <kbd>Space</kbd>, and press <kbd>G</kbd> for new varia
 | `make dev` | `npm run dev` | Run the app with the web inspector |
 | `make run` | `npm start` | Run the app as shipped |
 | `make web` | `npm run web` | Open the UI in a browser at `localhost:8080` (no native APIs) |
-| `make test` | `npm test` | Run the core smoke tests |
+| `make test` | `npm test` | Run the smoke, golden-seed and wizard tests |
 | `make build` | `npm run build` | Build release packages into `dist/` |
 | `make build-embed` | `npm run build:embed` | Build single-file binaries with resources embedded |
+| `make golden` | `npm run golden` | Re-record the golden seeds (only after bumping `GENERATOR_VERSION`) |
+| `make mac-release` | | macOS: build, sign and package `dist/Motivo-macOS.dmg` (see below) |
 | `make clean` / `make distclean` | `npm run clean` | Remove build output (`distclean` also removes `node_modules` and `bin`) |
 
 Run `make` with no arguments to print this list.
@@ -122,6 +161,49 @@ make build
 ```
 
 Ship the binary for your platform together with `resources.neu`, or use `make build-embed` to get one self-contained file per platform.
+
+### 🍎 macOS app, signing and notarization
+
+Run these on a Mac (they use `codesign`, `hdiutil` and `iconutil`); the logic lives in [`scripts/macos.sh`](scripts/macos.sh).
+
+| Make | Description |
+|---|---|
+| `make mac-app` | Build `dist/mac/Motivo.app` from the universal binary (resources embedded) |
+| `make mac-sign` | Sign the app: ad-hoc by default, or with `MAC_SIGN_IDENTITY` |
+| `make mac-dmg` | Package `dist/Motivo-macOS.dmg` |
+| `make mac-notarize` | Notarize and staple the dmg (needs a Developer ID and notary credentials) |
+| `make mac-release` | All of the above in one go (notarizes only when credentials are set) |
+| `make mac-verify` | Show the signature and what Gatekeeper thinks of it |
+| `make mac-run` | Open the built app |
+| `make mac-unquarantine` | Let a downloaded unsigned app open (`APP=/path/to/Motivo.app`) |
+
+Without an Apple Developer account, `make mac-release` produces an **ad-hoc signed** app: it runs on your Mac, but other people see the Gatekeeper warning described in [Download](#%EF%B8%8F-download). To ship a properly signed and notarized build:
+
+```bash
+# once: store your notary credentials in the keychain
+xcrun notarytool store-credentials motivo --apple-id you@example.com --team-id TEAMID
+
+make mac-release \
+  MAC_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  MAC_NOTARY_PROFILE=motivo
+```
+
+### 🚢 Publishing a release
+
+Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)). Push a version tag and the workflow tests, builds every platform, packages the macOS `.dmg` on a Mac runner and publishes a GitHub release with checksums:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The version in the tag is written into the app. Running the workflow by hand (*Actions → Release → Run workflow*) builds the packages as downloadable artifacts without publishing a release.
+
+To sign and notarize the macOS build in CI, add these repository secrets: `MAC_CERT_P12` (base64 of your Developer ID `.p12`), `MAC_CERT_PASSWORD`, `MAC_SIGN_IDENTITY`, and for notarization `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` (an [app-specific password](https://support.apple.com/102654)). Without them the app is ad-hoc signed.
+
+### 🌐 Website
+
+The landing page lives in [`site/`](site/) and is deployed to GitHub Pages by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) whenever `site/` changes on `master`. One-time setup: *Settings → Pages → Build and deployment → Source: GitHub Actions*. Its download buttons always point at the latest release.
 
 ---
 
@@ -151,9 +233,12 @@ Ship the binary for your platform together with `resources.neu`, or use `make bu
 ```text
 motivo/
 ├── AGENTS.md                   # conventions for AI agents and contributors
+├── .github/workflows/          # CI tests, release builds, GitHub Pages deploy
+├── packaging/macos/            # Info.plist template + entitlements for the .app
+├── site/                       # landing page (GitHub Pages) + screenshots
 ├── Makefile, package.json      # dev tasks
 ├── neutralino.config.json      # window + native API allow-list
-├── scripts/                    # golden-seed tooling (npm run golden)
+├── scripts/                    # golden-seed tooling, macOS packaging (macos.sh)
 ├── tests/                      # node:test suites: smoke tests + golden seeds
 └── resources/
     ├── index.html · css/app.css · fonts/ · icons/
@@ -194,6 +279,8 @@ motivo/
 |---|---|
 | 🔇 No sound on Linux | WebKitGTK plays Web Audio through GStreamer: `sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good` |
 | 🪟 Window doesn't open on Linux | Install WebKitGTK: `sudo apt install libwebkit2gtk-4.1-0` (or `-4.0-37` on older distros) |
+| 🍎 “Motivo can't be opened” / “Apple could not verify…” on macOS | The build isn't notarized. Open it once, then *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Motivo.app` (`make mac-unquarantine`) |
+| 🛡️ SmartScreen warning on Windows | Click **More info → Run anyway**. The app isn't code-signed yet |
 | ❓ `bin/` missing after cloning | Run `make install` (or `make update` to force a fresh download) |
 | 🐢 Long exports are slow | Rendering is faster than real time but scales with length. Evolving exports render every cycle, so lower *Cycles to export*. The export dialog shows the expected size and warns about very large renders; **Cancel** stops a render at any time |
 | 💾 Where is my library? | In your user data folder (`dataLocation: "system"`), e.g. `~/Library/Application Support/io.motivo.app` on macOS or `~/.local/share/io.motivo.app` on Linux. Data from older versions (stored next to the app) is migrated on first launch. Use *Library → Backup* for a portable copy |

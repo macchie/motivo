@@ -199,7 +199,7 @@ kbd {
 .viz-overlay { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 14px 18px; pointer-events: none; }
 .now-k { font-size: 9.5px; letter-spacing: .14em; color: var(--text-3); font-weight: 700; }
 .now-chord { font-family: var(--mono); font-size: 30px; line-height: 1.15; letter-spacing: -.5px; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
-.now-sec { font-size: 11.5px; color: var(--text-2); }
+.now-sec { font-size: 11.5px; color: var(--text-2); position: relative; z-index: 1; display: inline-block; margin-top: 2px; padding: 2px 7px 2px 0; border-radius: 6px; background: linear-gradient(90deg, rgba(14,17,23,.85) 70%, rgba(14,17,23,0)); text-shadow: 0 1px 3px rgba(0,0,0,.8); }
 .next { text-align: right; }
 .next-chord { font-family: var(--mono); font-size: 16px; color: var(--text-2); }
 .viz-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--text-3); font-size: 12.5px; pointer-events: none; transition: opacity .3s; }
