@@ -150,6 +150,7 @@ Ship the binary for your platform together with `resources.neu`, or use `make bu
 
 ```text
 motivo/
+├── AGENTS.md                   # conventions for AI agents and contributors
 ├── Makefile, package.json      # dev tasks
 ├── neutralino.config.json      # window + native API allow-list
 ├── scripts/                    # golden-seed tooling (npm run golden)
@@ -215,6 +216,8 @@ Ideas are welcome. Open an issue! 💬
 ## 🤝 Contributing
 
 Contributions of every size are appreciated: new genres, instruments, presets, bug fixes and docs.
+
+Before you start, read [AGENTS.md](AGENTS.md): it covers the project layout, the rules that keep saved tracks reproducible, and when to update the docs.
 
 1. 🍴 Fork the repo and create a branch: `git checkout -b feat/my-genre`
 2. 🛠️ `make install && make dev`
