@@ -24,4 +24,10 @@ export function caseParams(c, { STYLES, DEFAULT_PARAMS, applyStyle, PRESETS }) {
   return Object.assign(p, over);
 }
 
-export const songHash = (s) => createHash('sha256').update(JSON.stringify({ t: s.tracks, c: s.chords, s: s.sections, k: s.keyPc, sc: s.scaleId })).digest('hex').slice(0, 16);
+// Round non-integer numbers before hashing so the fingerprint is stable across
+// platforms: libm transcendentals (gauss() uses Math.log/Math.cos, weights use
+// Math.exp/Math.pow) can differ in the last bit between macOS and Linux, which
+// otherwise flips the whole hash. 1e-6 is far finer than any audible difference,
+// so this still catches every real change to the music.
+const roundFloats = (_k, v) => (typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 1e6) / 1e6 : v);
+export const songHash = (s) => createHash('sha256').update(JSON.stringify({ t: s.tracks, c: s.chords, s: s.sections, k: s.keyPc, sc: s.scaleId }, roundFloats)).digest('hex').slice(0, 16);
